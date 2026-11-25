@@ -1,1 +1,198 @@
 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumiar Digital</title>
+<style>
+*{box-sizing:border-box}
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:#f5f7f4;
+color:#183e2c;
+padding-bottom:85px;
+}
+header{
+background:linear-gradient(135deg,#123e2c,#387c50);
+color:white;
+padding:35px 20px;
+text-align:center;
+}
+header h1{margin:0;font-size:32px}
+header p{color:#ffe17a}
+main{padding:16px;max-width:800px;margin:auto}
+input{
+width:100%;
+padding:15px;
+border:1px solid #ccc;
+border-radius:12px;
+font-size:16px;
+}
+.grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px;
+}
+.categoria{
+background:white;
+border:1px solid #eee;
+border-radius:15px;
+padding:18px 5px;
+text-align:center;
+font-size:13px;
+color:#183e2c;
+cursor:pointer;
+}
+.emoji{
+display:block;
+font-size:30px;
+margin-bottom:10px;
+}
+.banner{
+background:#174632;
+color:white;
+padding:22px;
+border-radius:15px;
+margin-top:20px;
+text-align:center;
+}
+button{
+background:#f5cf52;
+color:#174632;
+border:0;
+padding:12px;
+border-radius:10px;
+font-weight:bold;
+cursor:pointer;
+}
+nav{
+position:fixed;
+bottom:0;
+width:100%;
+background:white;
+display:flex;
+justify-content:space-around;
+padding:15px 5px;
+box-shadow:0 -2px 10px #0001;
+}
+nav button{
+background:white;
+font-size:12px;
+}
+</style>
+</head>
+<body>
+
+<header>
+<h1>🏔️ Lumiar Digital</h1>
+<p>Tudo que você precisa, em um só lugar</p>
+</header>
+
+<main>
+<input id="busca" type="search"
+placeholder="Buscar categorias..."
+oninput="buscar()">
+
+<h2>Categorias</h2>
+
+<div class="grid" id="categorias">
+
+<button class="categoria" onclick="abrir(this)">
+<span class="emoji">🏡</span>Pousadas e chalés
+</button>
+
+<button class="categoria" onclick="abrir(this)">
+<span class="emoji">🍽️</span>Restaurantes e bares
+</button>
+
+<button class="categoria" onclick="abrir(this)">
+<span class="emoji">💧</span>Cachoeiras
+</button>
+
+<button class="categoria" onclick="abrir(this)">
+<span class="emoji">🏪</span>Comércio local
+</button>
+
+<button class="categoria" onclick="abrir(this)">
+<span class="emoji">🛵</span>Delivery
+</button>
+
+<button class="categoria" onclick="abrir(this)">
+<span class="emoji">🔧</span>Prestadores de serviços
+</button>
+
+<button class="categoria" onclick="abrir(this)">
+<span class="emoji">📅</span>Eventos
+</button>
+
+<button class="categoria" onclick="abrir(this)">
+<span class="emoji">🏷️</span>Promoções
+</button>
+
+<button class="categoria" onclick="abrir(this)">
+<span class="emoji">⛰️</span>Pontos turísticos
+</button>
+
+</div>
+
+<section id="resultado"></section>
+
+<div class="banner">
+<h2>Anuncie sua empresa</h2>
+<p>Divulgue seu negócio em Lumiar e região.</p>
+<button onclick="planos()">Conheça nossos planos</button>
+</div>
+
+</main>
+
+<nav>
+<button onclick="inicio()">🏠 Início</button>
+<button onclick="document.getElementById('busca').focus()">🧭 Explorar</button>
+<button onclick="alert('Favoritos em desenvolvimento')">♡ Favoritos</button>
+<button onclick="planos()">👤 Perfil</button>
+</nav>
+
+<script>
+function buscar(){
+let termo=document.getElementById('busca').value.toLowerCase();
+document.querySelectorAll('.categoria').forEach(c=>{
+c.style.display=c.textContent.toLowerCase().includes(termo)?'':'none';
+});
+}
+
+function abrir(c){
+let r=document.getElementById('resultado');
+r.replaceChildren();
+let h=document.createElement('h2');
+h.textContent=c.textContent.trim();
+let p=document.createElement('p');
+p.textContent='Em breve, estabelecimentos cadastrados nesta categoria.';
+r.append(h,p);
+r.scrollIntoView({behavior:'smooth'});
+}
+
+function inicio(){
+document.getElementById('busca').value='';
+document.getElementById('resultado').replaceChildren();
+buscar();
+window.scrollTo(0,0);
+}
+
+function planos(){
+let r=document.getElementById('resultado');
+r.innerHTML=`
+<h2>Planos comerciais</h2>
+<p><b>Básico:</b> Gratuito</p>
+<p><b>Profissional:</b> R$ 49,90/mês</p>
+<p><b>Destaque:</b> R$ 99,90/mês</p>
+<p><b>Premium:</b> R$ 149,90/mês</p>
+<p>Cadastro comercial em desenvolvimento.</p>`;
+r.scrollIntoView({behavior:'smooth'});
+}
+</script>
+
+</body>
+</html>
+
