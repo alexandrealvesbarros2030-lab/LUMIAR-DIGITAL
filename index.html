@@ -29,5 +29,24 @@ carregarEmpresas()
     home();
     alert('Erro ao carregar empresas.');
   });
+  const homeOriginal = home;
+
+home = function() {
+  homeOriginal();
+
+  const banner = document.querySelector('.banner');
+
+  if (banner) {
+    const botao = document.createElement('button');
+    botao.textContent = '🏪 Cadastre sua empresa';
+    botao.style.width = '100%';
+    botao.style.marginTop = '12px';
+    botao.onclick = () => {
+      window.location.href = 'comerciante.html';
+    };
+    banner.appendChild(botao);
+  }
+};
+
 </script>
 </html>
