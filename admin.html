@@ -92,8 +92,17 @@ button{background:#f5cf52;color:#194c36;border:0;padding:12px;border-radius:8px;
 <label>Site</label>
 <input id="site">
 
-<label>Link da foto</label>
+<label>Selecionar foto da empresa</label>
+<input id="arquivoFoto" type="file"
+accept="image/jpeg,image/png,image/webp">
+
+<img id="previewFoto" hidden
+style="width:100%;max-height:250px;object-fit:contain;border-radius:10px;margin-bottom:15px">
+
+<label>Link da foto (opcional)</label>
 <input id="foto" type="url">
+
+<p id="statusFoto"></p>
 
 <label>Horário de funcionamento</label>
 <input id="horario">
@@ -150,6 +159,49 @@ const categorias = [
 
 const $ = id => document.getElementById(id);
 let empresas = [];
+$('arquivoFoto').onchange = function(){
+const arquivo = this.files[0];
+$('previewFoto').hidden = true;
+$('statusFoto').textContent = '';
+
+if(!arquivo)return;
+
+if(arquivo.size > 5 * 1024 * 1024){
+alert('A foto deve ter até 5 MB.');
+this.value = '';
+return;
+}
+
+const leitor = new FileReader();
+leitor.onload = e => {
+$('previewFoto').src = e.target.result;
+$('previewFoto').hidden = false;
+};
+leitor.readAsDataURL(arquivo);
+};
+
+async function enviarFoto(){
+const arquivo = $('arquivoFoto').files[0];
+if(!arquivo)return $('foto').value.trim();
+
+const extensao = arquivo.name.split('.').pop().toLowerCase();
+const caminho = crypto.randomUUID() + '.' + extensao;
+
+$('statusFoto').textContent = 'Enviando foto...';
+
+const {error} = await cliente.storage
+.from('Fotos empresas')
+.upload(caminho, arquivo);
+
+if(error)throw error;
+
+const {data} = cliente.storage
+.from('Fotos empresas')
+.getPublicUrl(caminho);
+
+$('statusFoto').textContent = 'Foto enviada com sucesso!';
+return data.publicUrl;
+}
 
 categorias.forEach((nome,i)=>{
 const op=document.createElement('option');
@@ -285,7 +337,12 @@ const dados={};
 'horario','plano'].forEach(c=>{
 dados[c]=$(c).value.trim();
 });
-
+try {
+dados.foto = await enviarFoto();
+} catch(error) {
+alert('Erro ao enviar foto: ' + error.message);
+return;
+}
 dados.categoria=Number($('categoria').value);
 dados.aprovado=$('aprovado').checked;
 dados.destaque=$('destaque').checked;
