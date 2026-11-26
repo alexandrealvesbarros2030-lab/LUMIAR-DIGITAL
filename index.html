@@ -1,52 +1,793 @@
-<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lumiar Digital</title><style>*{box-sizing:border-box}body{margin:0;background:#f5f7f4;color:#183e2c;font:16px Arial,sans-serif;padding-bottom:85px}header{background:linear-gradient(135deg,#123d2b,#32764e);color:white;text-align:center;padding:30px 12px}header h1{margin:0}header p{color:#ffe17a}main{max-width:800px;margin:auto;padding:16px}input{width:100%;padding:15px;border:1px solid #ccc;border-radius:12px;font-size:16px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}button,a{cursor:pointer;font:inherit}button{border:0;border-radius:12px;padding:12px;background:#f5cf52;color:#174632;font-weight:bold}.cat{background:white;min-height:110px;border:1px solid #eee;font-size:13px}.cat span{display:block;font-size:30px;margin-bottom:10px}.banner{background:#174632;color:white;text-align:center;padding:24px;border-radius:15px;margin-top:24px}.entry{background:white;border-radius:15px;padding:16px;margin:12px 0;border:1px solid #ddd}.entry img{width:100%;max-height:220px;object-fit:cover;border-radius:10px}.entry a{display:inline-block;margin:8px;color:#174632}nav{position:fixed;bottom:0;background:white;width:100%;display:flex;justify-content:space-around;padding:12px 2px;box-shadow:0 -2px 10px #0001}nav button{background:white;font-size:12px;padding:8px}small{color:#567}</style><header><h1>🏔️ Lumiar Digital</h1><p>Tudo que você precisa, em um só lugar</p></header><main id="app"></main><nav><button onclick="home()">🏠 Início</button><button onclick="explore()">🧭 Explorar</button><button onclick="favorites()">♡ Favoritos</button><button onclick="profile()">👤 Perfil</button></nav><script>
-const cats=['Pousadas e chalés','Restaurantes e bares','Cachoeiras','Comércio local','Delivery','Prestadores de serviços','Eventos','Promoções','Pontos turísticos'];const icons=['🏡','🍽️','💧','🏪','🛵','🔧','📅','🏷️','⛰️'];
-// Cadastre estabelecimentos autorizados aqui. Exemplo de estrutura (não publicado):
-// {id:'1',categoria:1,nome:'Nome',foto:'',endereco:'',horario:'',whatsapp:'5521999999999',destaque:true}
-const empresas = [];
 
-async function carregarEmpresas() {
-  const resposta = await fetch(
-    'https://fhclimiwecgxmgigibix.supabase.co/rest/v1/empresas?select=*&aprovado=eq.true',
-    {
-      headers: {
-        apikey: 'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
-      }
-    }
-  );
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lumiar Digital</title>
 
-  if (!resposta.ok) {
-    throw new Error('Erro ao consultar empresas');
-  }
+<style>
+*{box-sizing:border-box}
 
-  const dados = await resposta.json();
-  empresas.splice(0, empresas.length, ...dados);
+body{
+margin:0;
+background:#f5f7f4;
+color:#183e2c;
+font:16px Arial,sans-serif;
+padding-bottom:85px
 }
-const app=document.getElementById('app');let fav=[];try{fav=JSON.parse(localStorage.getItem('lumiarFav')||'[]')}catch(e){}let mode='home',category=-1;const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();function el(tag,txt,parent=app){let e=document.createElement(tag);if(txt)e.textContent=txt;parent.append(e);return e}function btn(txt,fn,parent=app){let b=el('button',txt,parent);b.onclick=fn;return b}function reset(){app.replaceChildren();window.scrollTo(0,0)}function search(fn){let i=el('input');i.type='search';i.placeholder='Buscar estabelecimentos ou categorias...';i.oninput=()=>fn(i.value);return i}function cards(list,parent){if(!list.length){el('p','Nenhum estabelecimento cadastrado ou encontrado.',parent);return}list.forEach(e=>{let c=el('article','',parent);c.className='entry';if(e.foto){let img=el('img','',c);img.src=e.foto;img.alt=e.nome}el('h3',e.nome,c);if(e.destaque)el('small','★ Em destaque',c);if(e.endereco)el('p',e.endereco,c);if(e.horario)el('p','Horário: '+e.horario,c);if(e.whatsapp){let a=el('a','WhatsApp',c);a.href='https://wa.me/'+e.whatsapp.replace(/\D/g,'');a.target='_blank';a.rel='noopener'}if(e.endereco){let a=el('a','Localização',c);a.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.endereco+' Lumiar Nova Friburgo');a.target='_blank';a.rel='noopener'}let b=btn(fav.includes(e.id)?'♥ Favorito':'♡ Favoritar',()=>{fav=fav.includes(e.id)?fav.filter(x=>x!==e.id):[...fav,e.id];try{localStorage.setItem('lumiarFav',JSON.stringify(fav))}catch(err){}if(mode==='fav')favorites();else b.textContent=fav.includes(e.id)?'♥ Favorito':'♡ Favoritar'},c)})}function home(){mode='home';reset();let i=search(render);el('h2','Categorias');let g=el('div');g.className='grid';let results=el('section');function render(q=''){g.replaceChildren();results.replaceChildren();cats.forEach((n,k)=>{if(norm(n).includes(norm(q))){let b=btn('',()=>openCat(k),g);b.className='cat';el('span',icons[k],b);el('div',n,b)}});let list=empresas.filter(e=>q?norm(e.nome+' '+e.endereco).includes(norm(q)):e.destaque);if(list.length){el('h2',q?'Resultados':'Empresas em destaque',results);cards(list,results)}}render();let banner=el('section');banner.className='banner';el('h2','Anuncie sua empresa',banner);el('p','Divulgue seu negócio em Lumiar e região.',banner);btn('Conheça nossos planos',plans,banner)}function listing(title,list,m){mode=m;reset();btn('← Voltar',home);el('h2',title);let i=search(q=>render(q));let r=el('section');function render(q=''){r.replaceChildren();cards(list.filter(e=>norm(e.nome+' '+e.endereco).includes(norm(q))),r)}render()}function openCat(k){category=k;listing(icons[k]+' '+cats[k],empresas.filter(e=>e.categoria===k),'cat')}function explore(){listing('Explorar Lumiar',empresas,'explore')}function favorites(){listing('Meus favoritos',empresas.filter(e=>fav.includes(e.id)),'fav')}function profile(){reset();btn('← Voltar',home);el('h2','Perfil');el('p','Você está navegando como visitante. Seus favoritos ficam neste navegador. Ainda não há cadastro de usuários.')}function plans(){reset();btn('← Voltar',home);el('h2','Planos comerciais');el('p','Cadastro básico: proposta em desenvolvimento.');el('p','Os planos e condições serão definidos antes do lançamento comercial.')}
+
+header{
+background:linear-gradient(135deg,#123d2b,#32764e);
+color:white;
+text-align:center;
+padding:30px 12px
+}
+
+header h1{margin:0}
+header p{color:#ffe17a}
+
+main{
+max-width:800px;
+margin:auto;
+padding:16px
+}
+
+input{
+width:100%;
+padding:15px;
+border:1px solid #ccc;
+border-radius:12px;
+font-size:16px
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px
+}
+
+button,a{
+cursor:pointer;
+font:inherit
+}
+
+button{
+border:0;
+border-radius:12px;
+padding:12px;
+background:#f5cf52;
+color:#174632;
+font-weight:bold
+}
+
+.cat{
+background:white;
+min-height:110px;
+border:1px solid #eee;
+font-size:13px
+}
+
+.cat span{
+display:block;
+font-size:30px;
+margin-bottom:10px
+}
+
+.banner{
+background:#174632;
+color:white;
+text-align:center;
+padding:24px;
+border-radius:15px;
+margin-top:24px
+}
+
+.banner button{
+width:100%;
+margin-top:12px
+}
+
+.entry{
+background:white;
+border-radius:15px;
+padding:16px;
+margin:12px 0;
+border:1px solid #ddd
+}
+
+.entry img{
+width:100%;
+max-height:220px;
+object-fit:cover;
+border-radius:10px
+}
+
+.entry a{
+display:inline-block;
+margin:8px;
+color:#174632
+}
+
+nav{
+position:fixed;
+bottom:0;
+left:0;
+background:white;
+width:100%;
+display:flex;
+justify-content:space-around;
+padding:12px 2px;
+padding-bottom:calc(12px + env(safe-area-inset-bottom));
+box-shadow:0 -2px 10px #0001;
+z-index:100
+}
+
+nav button{
+background:white;
+font-size:12px;
+padding:8px
+}
+
+small{color:#567}
+
+.plano{
+background:white;
+border:1px solid #ddd;
+border-top:6px solid #194c36;
+border-radius:18px;
+padding:24px;
+margin:20px 0;
+box-shadow:0 4px 12px #00000008
+}
+
+.plano h2{
+text-align:center;
+margin:10px 0
+}
+
+.preco{
+font-size:36px;
+font-weight:bold;
+text-align:center;
+margin:20px 0;
+color:#194c36
+}
+
+.preco span{
+font-size:15px;
+font-weight:normal
+}
+
+.plano ul{
+padding:0;
+list-style:none;
+line-height:1.8
+}
+
+.plano li{
+padding:7px 0;
+border-bottom:1px solid #eee
+}
+
+.plano button{
+width:100%;
+padding:16px;
+margin-top:15px
+}
+
+.premium{
+border-top-color:#f5cf52
+}
+
+.selo{
+background:#194c36;
+color:white;
+text-align:center;
+padding:9px;
+border-radius:8px;
+font-size:13px;
+font-weight:bold
+}
+
+.aviso{
+font-size:13px;
+line-height:1.6;
+color:#567;
+text-align:center
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>🏔️ Lumiar Digital</h1>
+<p>Tudo que você precisa, em um só lugar</p>
+</header>
+
+<main id="app"></main>
+
+<nav>
+<button onclick="home()">🏠 Início</button>
+<button onclick="explore()">🧭 Explorar</button>
+<button onclick="favorites()">♡ Favoritos</button>
+<button onclick="profile()">👤 Perfil</button>
+</nav>
+
+<script>
+
+const cats=[
+'Pousadas e chalés',
+'Restaurantes e bares',
+'Cachoeiras',
+'Comércio local',
+'Delivery',
+'Prestadores de serviços',
+'Eventos',
+'Promoções',
+'Pontos turísticos'
+];
+
+const icons=[
+'🏡','🍽️','💧','🏪','🛵',
+'🔧','📅','🏷️','⛰️'
+];
+
+const empresas=[];
+
+async function carregarEmpresas(){
+
+const resposta=await fetch(
+'https://fhclimiwecgxmgigibix.supabase.co/rest/v1/empresas?select=*&aprovado=eq.true',
+{
+headers:{
+apikey:'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
+}
+}
+);
+
+if(!resposta.ok){
+throw new Error('Erro ao consultar empresas');
+}
+
+const dados=await resposta.json();
+
+empresas.splice(
+0,
+empresas.length,
+...dados
+);
+
+}
+
+const app=document.getElementById('app');
+
+let fav=[];
+
+try{
+fav=JSON.parse(
+localStorage.getItem('lumiarFav')||'[]'
+);
+
+if(!Array.isArray(fav))fav=[];
+
+}catch(e){
+fav=[];
+}
+
+let mode='home';
+let category=-1;
+
+const norm=s=>String(s||'')
+.normalize('NFD')
+.replace(/[\u0300-\u036f]/g,'')
+.toLowerCase();
+
+function el(tag,txt,parent=app){
+
+let e=document.createElement(tag);
+
+if(txt)e.textContent=txt;
+
+parent.append(e);
+
+return e;
+
+}
+
+function btn(txt,fn,parent=app){
+
+let b=el('button',txt,parent);
+
+b.onclick=fn;
+
+return b;
+
+}
+
+function reset(){
+
+app.replaceChildren();
+
+window.scrollTo(0,0);
+
+}
+
+function search(fn){
+
+let i=el('input');
+
+i.type='search';
+
+i.placeholder=
+'Buscar estabelecimentos ou categorias...';
+
+i.oninput=()=>fn(i.value);
+
+return i;
+
+}
+
+function corresponde(e,q){
+
+return norm(
+e.nome+' '+
+(e.endereco||'')+' '+
+(cats[e.categoria]||'')
+).includes(norm(q));
+
+}
+
+function cards(list,parent){
+
+if(!list.length){
+
+el(
+'p',
+'Nenhum estabelecimento cadastrado ou encontrado.',
+parent
+);
+
+return;
+
+}
+
+list.forEach(e=>{
+
+let c=el('article','',parent);
+
+c.className='entry';
+
+if(e.foto){
+
+let img=el('img','',c);
+
+img.src=e.foto;
+
+img.alt=e.nome;
+
+img.loading='lazy';
+
+}
+
+el('h3',e.nome,c);
+
+if(e.destaque){
+
+el('small','★ Em destaque',c);
+
+}
+
+if(e.endereco){
+
+el('p',e.endereco,c);
+
+}
+
+if(e.horario){
+
+el('p','Horário: '+e.horario,c);
+
+}
+
+if(e.whatsapp){
+
+let a=el('a','WhatsApp',c);
+
+a.href='https://wa.me/'+
+String(e.whatsapp).replace(/\D/g,'');
+
+a.target='_blank';
+
+a.rel='noopener noreferrer';
+
+}
+
+if(e.endereco){
+
+let a=el('a','Localização',c);
+
+a.href=
+'https://www.google.com/maps/search/?api=1&query='+
+encodeURIComponent(
+e.endereco+' Lumiar Nova Friburgo'
+);
+
+a.target='_blank';
+
+a.rel='noopener noreferrer';
+
+}
+
+let b=btn(
+fav.includes(e.id)?
+'♥ Favorito':'♡ Favoritar',
+()=>{
+
+fav=fav.includes(e.id)?
+fav.filter(x=>x!==e.id):
+[...fav,e.id];
+
+try{
+
+localStorage.setItem(
+'lumiarFav',
+JSON.stringify(fav)
+);
+
+}catch(err){}
+
+if(mode==='fav'){
+
+favorites();
+
+}else{
+
+b.textContent=fav.includes(e.id)?
+'♥ Favorito':'♡ Favoritar';
+
+}
+
+},
+c
+);
+
+});
+
+}
+
+function home(){
+
+mode='home';
+
+reset();
+
+search(render);
+
+el('h2','Categorias');
+
+let g=el('div');
+
+g.className='grid';
+
+let results=el('section');
+
+function render(q=''){
+
+g.replaceChildren();
+
+results.replaceChildren();
+
+cats.forEach((n,k)=>{
+
+if(norm(n).includes(norm(q))){
+
+let b=btn('',()=>openCat(k),g);
+
+b.className='cat';
+
+el('span',icons[k],b);
+
+el('div',n,b);
+
+}
+
+});
+
+let list=empresas.filter(e=>
+q?corresponde(e,q):e.destaque
+);
+
+if(list.length){
+
+el(
+'h2',
+q?'Resultados':'Empresas em destaque',
+results
+);
+
+cards(list,results);
+
+}
+
+}
+
+render();
+
+let banner=el('section');
+
+banner.className='banner';
+
+el('h2','Anuncie sua empresa',banner);
+
+el(
+'p',
+'Divulgue seu negócio em Lumiar e região.',
+banner
+);
+
+btn(
+'Conheça nossos planos',
+plans,
+banner
+);
+
+btn(
+'🏪 Cadastre sua empresa',
+()=>{
+window.location.href='comerciante.html';
+},
+banner
+);
+
+}
+
+function listing(title,list,m){
+
+mode=m;
+
+reset();
+
+btn('← Voltar',home);
+
+el('h2',title);
+
+search(q=>render(q));
+
+let r=el('section');
+
+function render(q=''){
+
+r.replaceChildren();
+
+cards(
+list.filter(e=>corresponde(e,q)),
+r
+);
+
+}
+
+render();
+
+}
+
+function openCat(k){
+
+category=k;
+
+listing(
+icons[k]+' '+cats[k],
+empresas.filter(e=>Number(e.categoria)===k),
+'cat'
+);
+
+}
+
+function explore(){
+
+listing(
+'Explorar Lumiar',
+empresas,
+'explore'
+);
+
+}
+
+function favorites(){
+
+listing(
+'Meus favoritos',
+empresas.filter(e=>fav.includes(e.id)),
+'fav'
+);
+
+}
+
+function profile(){
+
+mode='profile';
+
+reset();
+
+btn('← Voltar',home);
+
+el('h2','Perfil');
+
+el(
+'p',
+'Você está navegando como visitante. Seus favoritos ficam neste navegador.'
+);
+
+let c=el('section');
+
+c.className='entry';
+
+el('h2','Área do comerciante',c);
+
+el(
+'p',
+'Cadastre ou gerencie sua empresa.',
+c
+);
+
+btn(
+'Acessar minha empresa',
+()=>{
+window.location.href='comerciante.html';
+},
+c
+);
+
+btn(
+'Conhecer planos comerciais',
+plans,
+c
+);
+
+}
+
+function plans(){
+
+mode='plans';
+
+reset();
+
+btn('← Voltar',home);
+
+el('h2','Planos comerciais');
+
+el(
+'p',
+'Sua empresa mais perto dos moradores e turistas de Lumiar.'
+);
+
+const planos=[
+
+{
+nome:'Básico',
+valor:'19,90',
+beneficios:[
+'Cadastro comercial',
+'Foto da empresa',
+'WhatsApp e telefone',
+'Localização e horário'
+]
+},
+
+{
+nome:'Profissional',
+valor:'39,90',
+beneficios:[
+'Todos os benefícios do Básico',
+'Instagram e site',
+'Divulgação de promoções',
+'Destaque na categoria'
+]
+},
+
+{
+nome:'Premium',
+valor:'69,90',
+beneficios:[
+'Todos os benefícios do Profissional',
+'Destaque na página inicial',
+'Banner publicitário',
+'Prioridade nas pesquisas'
+]
+}
+
+];
+
+planos.forEach(p=>{
+
+let c=el('article');
+
+c.className='plano';
+
+if(p.nome==='Premium'){
+
+c.classList.add('premium');
+
+let selo=el(
+'div',
+'MÁXIMA VISIBILIDADE',
+c
+);
+
+selo.className='selo';
+
+}
+
+el('h2',p.nome,c);
+
+let preco=el(
+'div',
+'R$ '+p.valor,
+c
+);
+
+preco.className='preco';
+
+el('span',' /mês',preco);
+
+let lista=el('ul','',c);
+
+p.beneficios.forEach(item=>{
+
+el('li','✓ '+item,lista);
+
+});
+
+btn(
+'Cadastrar empresa',
+()=>{
+window.location.href='comerciante.html';
+},
+c
+);
+
+});
+
+let aviso=el(
+'p',
+'Planos propostos para o lançamento comercial. Benefícios e contratação sujeitos à disponibilidade.'
+);
+
+aviso.className='aviso';
+
+let banner=el('section');
+
+banner.className='banner';
+
+el('h2','Acesso gratuito',banner);
+
+el(
+'p',
+'Moradores e turistas podem explorar o Lumiar Digital gratuitamente.',
+banner
+);
+
+btn('Explorar Lumiar',explore,banner);
+
+}
+
 carregarEmpresas()
-  .then(() => home())
-  .catch(erro => {
-    console.error(erro);
-    home();
-    alert('Erro ao carregar empresas.');
-  });
-  const homeOriginal = home;
 
-home = function() {
-  homeOriginal();
+.then(()=>home())
 
-  const banner = document.querySelector('.banner');
+.catch(erro=>{
 
-  if (banner) {
-    const botao = document.createElement('button');
-    botao.textContent = '🏪 Cadastre sua empresa';
-    botao.style.width = '100%';
-    botao.style.marginTop = '12px';
-    botao.onclick = () => {
-      window.location.href = 'comerciante.html';
-    };
-    banner.appendChild(botao);
-  }
-};
+console.error(erro);
+
+home();
+
+alert('Erro ao carregar empresas.');
+
+});
 
 </script>
+
+</body>
 </html>
+
