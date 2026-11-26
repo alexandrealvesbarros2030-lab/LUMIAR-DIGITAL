@@ -1,0 +1,218 @@
+ 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comerciante - Lumiar Digital</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6f2;color:#194c36;font-family:Arial,sans-serif}
+header{background:#194c36;color:white;padding:25px;text-align:center}
+main{max-width:700px;margin:auto;padding:16px}
+section{background:white;padding:20px;border-radius:15px;margin-bottom:15px}
+input,select,textarea{width:100%;padding:13px;margin:8px 0 15px;border:1px solid #ccc;border-radius:8px;font-size:16px}
+button{width:100%;background:#194c36;color:white;border:0;padding:15px;border-radius:10px;font-size:16px;font-weight:bold;margin:5px 0}
+.amarelo{background:#f5cf52;color:#194c36}
+[hidden]{display:none!important}
+a{color:#194c36}
+</style>
+</head>
+<body>
+<header>
+<h1>🏔️ Lumiar Digital</h1>
+<p>Área do comerciante</p>
+</header>
+<main>
+<section id="login">
+<h2>Acesse sua conta</h2>
+<input id="email" type="email" placeholder="E-mail">
+<input id="senha" type="password" placeholder="Senha">
+<button onclick="entrar()">Entrar</button>
+<button class="amarelo" onclick="criarConta()">Criar minha conta</button>
+<p id="mensagem"></p>
+</section>
+
+<section id="painel" hidden>
+<h2>Cadastre sua empresa</h2>
+<p id="usuario"></p>
+
+<form id="formEmpresa">
+<label>Nome da empresa</label>
+<input id="nome" required>
+
+<label>Categoria</label>
+<select id="categoria">
+<option value="0">Pousadas e chalés</option>
+<option value="1">Restaurantes e bares</option>
+<option value="2">Cachoeiras</option>
+<option value="3">Comércio local</option>
+<option value="4">Delivery</option>
+<option value="5">Prestadores de serviços</option>
+<option value="6">Eventos</option>
+<option value="7">Promoções</option>
+<option value="8">Pontos turísticos</option>
+</select>
+
+<label>Descrição</label>
+<textarea id="descricao"></textarea>
+
+<label>Endereço</label>
+<input id="endereco">
+
+<label>WhatsApp comercial</label>
+<input id="whatsapp" type="tel">
+
+<label>Telefone comercial</label>
+<input id="telefone" type="tel">
+
+<label>Instagram comercial</label>
+<input id="instagram">
+
+<label>Site</label>
+<input id="site" type="url">
+
+<label>Horário de funcionamento</label>
+<input id="horario">
+
+<label>Foto da empresa</label>
+<input id="arquivoFoto" type="file" accept="image/jpeg,image/png,image/webp">
+
+<p>Envie somente fotos autorizadas para divulgação pública.</p>
+
+<button id="enviar">Enviar para aprovação</button>
+</form>
+<p id="status"></p>
+<button class="amarelo" onclick="sair()">Sair</button>
+</section>
+
+<a href="./index.html">← Voltar ao Lumiar Digital</a>
+</main>
+
+<script>
+const cliente = supabase.createClient(
+'https://fhclimiwecgxmgigibix.supabase.co',
+'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
+);
+
+const $ = id => document.getElementById(id);
+
+async function criarConta(){
+const {error}=await cliente.auth.signUp({
+email:$('email').value.trim(),
+password:$('senha').value,
+options:{
+emailRedirectTo:location.origin+location.pathname
+}
+});
+
+$('mensagem').textContent=error
+?error.message
+:'Confira seu e-mail para confirmar o cadastro.';
+}
+
+async function entrar(){
+const {data,error}=await cliente.auth.signInWithPassword({
+email:$('email').value.trim(),
+password:$('senha').value
+});
+
+if(error){
+$('mensagem').textContent=error.message;
+return;
+}
+abrirPainel(data.user);
+}
+
+function abrirPainel(user){
+$('login').hidden=true;
+$('painel').hidden=false;
+$('usuario').textContent=user.email;
+$('senha').value='';
+}
+
+async function sair(){
+await cliente.auth.signOut();
+location.reload();
+}
+
+$('formEmpresa').onsubmit=async e=>{
+e.preventDefault();
+$('enviar').disabled=true;
+
+try{
+const {data:{user}}=await cliente.auth.getUser();
+
+if(!user)throw new Error('Faça login novamente.');
+
+let foto='';
+const arquivo=$('arquivoFoto').files[0];
+
+if(arquivo){
+const tipos={
+'image/jpeg':'jpg',
+'image/png':'png',
+'image/webp':'webp'
+};
+
+const ext=tipos[arquivo.type];
+
+if(!ext || arquivo.size>5*1024*1024){
+throw new Error('Escolha uma imagem JPG, PNG ou WEBP de até 5 MB.');
+}
+
+$('status').textContent='Enviando foto...';
+
+const caminho=user.id+'/'+crypto.randomUUID()+'.'+ext;
+
+const {error}=await cliente.storage
+.from('Fotos empresas')
+.upload(caminho,arquivo);
+
+if(error)throw error;
+
+foto=cliente.storage
+.from('Fotos empresas')
+.getPublicUrl(caminho).data.publicUrl;
+}
+
+const dados={
+id:crypto.randomUUID(),
+categoria:Number($('categoria').value),
+foto:foto,
+aprovado:false,
+destaque:false,
+plano:'basico'
+};
+
+['nome','descricao','endereco','whatsapp',
+'telefone','instagram','site','horario']
+.forEach(c=>dados[c]=$(c).value.trim());
+
+const {error}=await cliente
+.from('empresas')
+.insert(dados);
+
+if(error)throw error;
+
+$('status').textContent='Empresa enviada com sucesso! Aguarde a aprovação do administrador.';
+$('formEmpresa').reset();
+
+}catch(error){
+$('status').textContent='Erro: '+error.message;
+}finally{
+$('enviar').disabled=false;
+}
+};
+
+cliente.auth.getSession().then(({data})=>{
+if(data.session)abrirPainel(data.session.user);
+});
+
+cliente.auth.onAuthStateChange((evento,sessao)=>{
+if(sessao)abrirPainel(sessao.user);
+});
+</script>
+</body>
+</html>
