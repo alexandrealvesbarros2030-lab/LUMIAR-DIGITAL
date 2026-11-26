@@ -1,0 +1,365 @@
+<!DOCTYPE html>  <html lang="pt-BR">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1">  
+<title>Admin - Lumiar Digital</title>  
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  
+<style>  
+*{box-sizing:border-box}  
+body{margin:0;background:#f3f6f2;color:#194c36;font-family:Arial,sans-serif}  
+header{background:#194c36;color:white;padding:25px;text-align:center}  
+main{max-width:800px;margin:auto;padding:16px}  
+section,article{background:white;padding:18px;border-radius:15px;margin-bottom:15px}  
+input,select,textarea{width:100%;padding:12px;margin:6px 0 14px;border:1px solid #ccc;border-radius:8px;font-size:16px}  
+input[type=checkbox]{width:auto}  
+button{background:#f5cf52;color:#194c36;border:0;padding:12px;border-radius:8px;font-size:15px;font-weight:bold;margin:4px;cursor:pointer}  
+.verde{background:#194c36;color:white}  
+.vermelho{background:#b83232;color:white}  
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}  
+.numero{font-size:26px;font-weight:bold}  
+[hidden]{display:none!important}  
+</style>  
+</head>  
+<body>  <header>  
+<h1>🏔️ Lumiar Digital</h1>  
+<p>Painel administrativo</p>  
+</header>  <main>  
+<section id="login">  
+<h2>Acesso administrativo</h2>  
+<form id="formLogin">  
+<input id="email" type="email" placeholder="E-mail" required>  
+<input id="senha" type="password" placeholder="Senha" required>  
+<button class="verde">Entrar</button>  
+</form>  
+<p id="mensagem"></p>  
+</section>  <div id="painel" hidden>  
+<button onclick="sair()">Sair</button>  <div class="grid">  
+<section>Total de empresas  
+<div class="numero" id="total">0</div>  
+</section>  
+<section>Aprovadas  
+<div class="numero" id="ativas">0</div>  
+</section>  
+<section>Pendentes  
+<div class="numero" id="pendentes">0</div>  
+</section>  
+<section>Destaques  
+<div class="numero" id="destaques">0</div>  
+</section>  
+</div>  <section>  
+<button class="verde" onclick="nova()">+ Cadastrar empresa</button>  
+</section>  <section id="cadastro" hidden>  
+<h2 id="titulo">Cadastrar empresa</h2>  <form id="formEmpresa">  
+<input id="empresaId" type="hidden">  <label>Nome da empresa</label>
+<input id="nome" required>
+
+<label>Categoria</label>
+<select id="categoria"></select>
+
+<label>Descrição</label>
+
+<textarea id="descricao"></textarea>  <label>Endereço</label>
+<input id="endereco">
+
+<label>WhatsApp</label>
+<input id="whatsapp" type="tel" placeholder="5521999999999">
+
+<label>Telefone</label>
+<input id="telefone" type="tel">
+
+<label>Instagram</label>
+<input id="instagram">
+
+<label>Site</label>
+<input id="site">
+
+<label>Selecionar foto da empresa</label>
+<input id="arquivoFoto" type="file"  
+accept="image/jpeg,image/png,image/webp">
+
+<img id="previewFoto" hidden  
+style="width:100%;max-height:250px;object-fit:contain;border-radius:10px;margin-bottom:15px">
+
+<label>Link da foto (opcional)</label>
+<input id="foto" type="url">
+
+<p id="statusFoto"></p>  <label>Horário de funcionamento</label>
+<input id="horario">
+
+<label>Plano comercial</label>
+<select id="plano">
+
+<option value="basico">Básico</option>  
+<option value="profissional">Profissional</option>  
+<option value="premium">Premium</option>  
+</select>  <p><label>  
+<input type="checkbox" id="aprovado">  
+Empresa aprovada  
+</label></p>  <p><label>  
+<input type="checkbox" id="destaque">  
+Empresa em destaque  
+</label></p>  <button class="verde">Salvar empresa</button>
+<button type="button" onclick="fechar()">Cancelar</button>
+
+</form>  
+</section>  <section>  
+<h2>Empresas cadastradas</h2>  
+<input id="busca" placeholder="Buscar empresa..." oninput="listar()">  
+<div id="lista"></div>  
+</section>  
+</div>  
+</main>  <script>  
+const cliente = supabase.createClient(  
+'https://fhclimiwecgxmgigibix.supabase.co',  
+'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'  
+);  
+  
+const adminId = '35187a47-365b-436b-8a79-c77c3f15871b';  
+  
+const categorias = [  
+'Pousadas e chalés',  
+'Restaurantes e bares',  
+'Cachoeiras',  
+'Comércio local',  
+'Delivery',  
+'Prestadores de serviços',  
+'Eventos',  
+'Promoções',  
+'Pontos turísticos'  
+];  
+  
+const $ = id => document.getElementById(id);  
+let empresas = [];  
+$('arquivoFoto').onchange = function(){  
+const arquivo = this.files[0];  
+$('previewFoto').hidden = true;  
+$('statusFoto').textContent = '';  
+  
+if(!arquivo)return;  
+  
+if(arquivo.size > 5 * 1024 * 1024){  
+alert('A foto deve ter até 5 MB.');  
+this.value = '';  
+return;  
+}  
+  
+const leitor = new FileReader();  
+leitor.onload = e => {  
+$('previewFoto').src = e.target.result;  
+$('previewFoto').hidden = false;  
+};  
+leitor.readAsDataURL(arquivo);  
+};  
+  
+async function enviarFoto(){  
+const arquivo = $('arquivoFoto').files[0];  
+if(!arquivo)return $('foto').value.trim();  
+  
+const extensao = arquivo.name.split('.').pop().toLowerCase();  
+const caminho = crypto.randomUUID() + '.' + extensao;  
+  
+$('statusFoto').textContent = 'Enviando foto...';  
+  
+const {error} = await cliente.storage  
+.from('Fotos empresas')  
+.upload(caminho, arquivo);  
+  
+if(error)throw error;  
+  
+const {data} = cliente.storage  
+.from('Fotos empresas')  
+.getPublicUrl(caminho);  
+  
+$('statusFoto').textContent = 'Foto enviada com sucesso!';  
+return data.publicUrl;  
+}  
+  
+categorias.forEach((nome,i)=>{  
+const op=document.createElement('option');  
+op.value=i;  
+op.textContent=nome;  
+$('categoria').append(op);  
+});  
+  
+$('formLogin').onsubmit=async e=>{  
+e.preventDefault();  
+  
+const {data,error}=await cliente.auth.signInWithPassword({  
+email:$('email').value,  
+password:$('senha').value  
+});  
+  
+if(error){  
+$('mensagem').textContent='Erro ao entrar: '+error.message;  
+return;  
+}  
+  
+if(data.user.id!==adminId){  
+await cliente.auth.signOut();  
+$('mensagem').textContent='Acesso não autorizado.';  
+return;  
+}  
+  
+$('login').hidden=true;  
+$('painel').hidden=false;  
+$('senha').value='';  
+await carregar();  
+};  
+  
+async function sair(){  
+await cliente.auth.signOut();  
+location.reload();  
+}  
+  
+async function carregar(){  
+const {data,error}=await cliente  
+.from('empresas')  
+.select('*')  
+.order('nome');  
+  
+if(error){  
+alert(error.message);  
+return;  
+}  
+  
+empresas=data;  
+$('total').textContent=empresas.length;  
+$('ativas').textContent=empresas.filter(e=>e.aprovado).length;  
+$('pendentes').textContent=empresas.filter(e=>!e.aprovado).length;  
+$('destaques').textContent=empresas.filter(e=>e.destaque).length;  
+listar();  
+}  
+  
+function listar(){  
+const lista=$('lista');  
+lista.replaceChildren();  
+  
+const busca=$('busca').value.toLowerCase();  
+  
+empresas.filter(e=>e.nome.toLowerCase().includes(busca))  
+.forEach(e=>{  
+const card=document.createElement('article');  
+  
+const titulo=document.createElement('h3');  
+titulo.textContent=e.nome;  
+card.append(titulo);  
+  
+const info=document.createElement('p');  
+info.textContent=(categorias[e.categoria]||'Categoria')+  
+' | '+(e.aprovado?'Aprovada':'Pendente')+  
+' | '+(e.plano||'basico');  
+card.append(info);  
+  
+function botao(texto,acao,classe){  
+const b=document.createElement('button');  
+b.textContent=texto;  
+b.className=classe||'';  
+b.onclick=acao;  
+card.append(b);  
+}  
+  
+botao('Editar',()=>editar(e));  
+botao(e.aprovado?'Desaprovar':'Aprovar',  
+()=>atualizar(e.id,{aprovado:!e.aprovado}),'verde');  
+  
+botao(e.destaque?'Retirar destaque':'Destacar',  
+()=>atualizar(e.id,{destaque:!e.destaque}));  
+  
+botao('Excluir',()=>excluir(e.id),'vermelho');  
+  
+lista.append(card);  
+});  
+}  
+  
+function nova(){  
+$('formEmpresa').reset();  
+$('empresaId').value='';  
+$('titulo').textContent='Cadastrar empresa';  
+$('cadastro').hidden=false;  
+$('cadastro').scrollIntoView();  
+}  
+  
+function fechar(){  
+$('cadastro').hidden=true;  
+}  
+  
+function editar(e){  
+nova();  
+$('titulo').textContent='Editar empresa';  
+$('empresaId').value=e.id;  
+  
+['nome','categoria','descricao','endereco',  
+'whatsapp','telefone','instagram','site',  
+'foto','horario','plano'].forEach(c=>{  
+$(c).value=e[c]??'';  
+});  
+  
+$('aprovado').checked=!!e.aprovado;  
+$('destaque').checked=!!e.destaque;  
+}  
+  
+$('formEmpresa').onsubmit=async ev=>{  
+ev.preventDefault();  
+  
+const dados={};  
+  
+['nome','descricao','endereco','whatsapp',  
+'telefone','instagram','site','foto',  
+'horario','plano'].forEach(c=>{  
+dados[c]=$(c).value.trim();  
+});  
+try {  
+dados.foto = await enviarFoto();  
+} catch(error) {  
+alert('Erro ao enviar foto: ' + error.message);  
+return;  
+}  
+dados.categoria=Number($('categoria').value);  
+dados.aprovado=$('aprovado').checked;  
+dados.destaque=$('destaque').checked;  
+  
+const id=$('empresaId').value;  
+  
+const consulta=id  
+?cliente.from('empresas').update(dados).eq('id',id)  
+:cliente.from('empresas').insert({  
+...dados,id:crypto.randomUUID()  
+});  
+  
+const {error}=await consulta.select('id').single();  
+  
+if(error){  
+alert('Erro ao salvar: '+error.message);  
+return;  
+}  
+  
+alert('Empresa salva com sucesso!');  
+fechar();  
+await carregar();  
+};  
+  
+async function atualizar(id,dados){  
+const {error}=await cliente.from('empresas')  
+.update(dados).eq('id',id).select('id').single();  
+  
+if(error){  
+alert(error.message);  
+return;  
+}  
+await carregar();  
+}  
+  
+async function excluir(id){  
+if(!confirm('Deseja realmente excluir esta empresa?'))return;  
+  
+const {error}=await cliente.from('empresas')  
+.delete().eq('id',id).select('id').single();  
+  
+if(error){  
+alert(error.message);  
+return;  
+}  
+await carregar();  
+}  
+</script>  </body>  
+</html>
