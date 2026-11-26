@@ -213,6 +213,163 @@ if(data.session)abrirPainel(data.session.user);
 cliente.auth.onAuthStateChange((evento,sessao)=>{
 if(sessao)abrirPainel(sessao.user);
 });
+ let empresaEditando = null;
+
+const painelEmpresas = document.createElement('div');
+painelEmpresas.innerHTML = `
+<h2>Minhas empresas</h2>
+<div id="minhasEmpresas"></div>
+<button class="amarelo" type="button"
+onclick="novaEmpresa()">
++ Cadastrar nova empresa
+</button>
+<hr>
+`;
+
+$('painel').prepend(painelEmpresas);
+
+async function carregarMinhasEmpresas(){
+const {data:{user}} =
+await cliente.auth.getUser();
+
+if(!user)return;
+
+const {data,error} = await cliente
+.from('empresas')
+.select('*')
+.eq('user_id',user.id)
+.order('criado_em',{ascending:false});
+
+const lista = $('minhasEmpresas');
+lista.replaceChildren();
+
+if(error){
+lista.textContent=error.message;
+return;
+}
+
+if(!data.length){
+lista.textContent='Nenhuma empresa cadastrada.';
+return;
+}
+
+data.forEach(empresa=>{
+const card=document.createElement('div');
+card.style.cssText=
+'background:#f3f6f2;padding:15px;border-radius:12px;margin-bottom:12px';
+
+const titulo=document.createElement('h3');
+titulo.textContent=empresa.nome;
+
+const status=document.createElement('p');
+status.textContent=empresa.aprovado
+?'Status: Aprovada'
+:'Status: Aguardando aprovação';
+
+const plano=document.createElement('p');
+plano.textContent='Plano: '+empresa.plano;
+
+const botao=document.createElement('button');
+botao.type='button';
+botao.className='amarelo';
+botao.textContent='Editar minha empresa';
+botao.onclick=()=>editarEmpresa(empresa);
+
+card.append(titulo,status,plano,botao);
+lista.appendChild(card);
+});
+}
+
+function editarEmpresa(empresa){
+empresaEditando=empresa.id;
+
+$('formEmpresa').reset();
+
+['nome','categoria','descricao','endereco',
+'whatsapp','telefone','instagram','site',
+'horario'].forEach(c=>{
+$(c).value=empresa[c]??'';
+});
+
+$('enviar').textContent='Salvar alterações';
+$('status').textContent='';
+$('formEmpresa').scrollIntoView({
+behavior:'smooth'
+});
+}
+
+function novaEmpresa(){
+empresaEditando=null;
+$('formEmpresa').reset();
+$('enviar').textContent='Enviar para aprovação';
+$('status').textContent='';
+$('formEmpresa').scrollIntoView({
+behavior:'smooth'
+});
+}
+
+const abrirPainelOriginal=abrirPainel;
+
+abrirPainel=function(user){
+abrirPainelOriginal(user);
+setTimeout(carregarMinhasEmpresas,0);
+};
+
+const cadastroOriginal=$('formEmpresa').onsubmit;
+
+$('formEmpresa').onsubmit=async e=>{
+e.preventDefault();
+
+if(!empresaEditando){
+await cadastroOriginal(e);
+await carregarMinhasEmpresas();
+return;
+}
+
+$('enviar').disabled=true;
+
+try{
+const {data:{user}}=
+await cliente.auth.getUser();
+
+if(!user)throw new Error('Faça login novamente.');
+
+const dados={
+categoria:Number($('categoria').value)
+};
+
+['nome','descricao','endereco','whatsapp',
+'telefone','instagram','site','horario']
+.forEach(c=>dados[c]=$(c).value.trim());
+
+if($('arquivoFoto').files.length){
+throw new Error(
+'A troca de foto ainda não está disponível na edição.'
+);
+}
+
+const {data,error}=await cliente
+.from('empresas')
+.update(dados)
+.eq('id',empresaEditando)
+.eq('user_id',user.id)
+.select('id')
+.single();
+
+if(error)throw error;
+
+novaEmpresa();
+$('status').textContent=
+'Empresa atualizada com sucesso!';
+
+await carregarMinhasEmpresas();
+
+}catch(error){
+$('status').textContent='Erro: '+error.message;
+}finally{
+$('enviar').disabled=false;
+}
+};
 </script>
 </body>
 </html>
