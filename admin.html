@@ -1,0 +1,124 @@
+ 
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin - Lumiar Digital</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f3f6f2;
+  color: #194c36;
+}
+header {
+  background: #194c36;
+  color: white;
+  padding: 25px;
+  text-align: center;
+}
+main {
+  max-width: 500px;
+  margin: 25px auto;
+  padding: 20px;
+}
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px #0001;
+}
+input, button {
+  width: 100%;
+  padding: 15px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  border-radius: 10px;
+  font-size: 16px;
+}
+input {
+  border: 1px solid #ccc;
+}
+button {
+  background: #f8d45b;
+  color: #194c36;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>🏔️ Lumiar Digital</h1>
+<p>Painel administrativo</p>
+</header>
+
+<main>
+<div class="card" id="login">
+<h2>Acesso administrativo</h2>
+
+<input type="email" id="email"
+placeholder="Seu e-mail">
+
+<input type="password" id="senha"
+placeholder="Sua senha">
+
+<button onclick="entrar()">Entrar</button>
+
+<p id="mensagem"></p>
+</div>
+
+<div class="card" id="painel" hidden>
+<h2>Bem-vindo ao painel</h2>
+<p>Login realizado com sucesso.</p>
+<button onclick="sair()">Sair</button>
+</div>
+</main>
+
+<script>
+const cliente = supabase.createClient(
+  'https://fhclimiwecgxmgigibix.supabase.co',
+  'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
+);
+
+async function entrar() {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('senha').value;
+  const mensagem = document.getElementById('mensagem');
+
+  const { data, error } =
+    await cliente.auth.signInWithPassword({
+      email, password
+    });
+
+  if (error) {
+    mensagem.textContent = 'Erro ao entrar: ' + error.message;
+    return;
+  }
+
+  if (data.user.id !==
+    '35187a47-365b-436b-8a79-c77c3f15871b') {
+    await cliente.auth.signOut();
+    mensagem.textContent = 'Acesso não autorizado.';
+    return;
+  }
+
+  document.getElementById('login').hidden = true;
+  document.getElementById('painel').hidden = false;
+}
+
+async function sair() {
+  await cliente.auth.signOut();
+  location.reload();
+}
+</script>
+
+</body>
+</html>
