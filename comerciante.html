@@ -370,6 +370,227 @@ $('status').textContent='Erro: '+error.message;
 $('enviar').disabled=false;
 }
 };
+let fotoAtual = '';
+let removerFoto = false;
+let urlPrevia = '';
+
+const areaFoto = document.createElement('div');
+
+areaFoto.innerHTML = `
+<p id="tituloFoto" hidden>Foto da empresa</p>
+
+<img id="previaFoto" hidden
+style="width:100%;max-height:250px;
+object-fit:cover;border-radius:12px;
+margin-bottom:12px">
+
+<button type="button" id="btnRemoverFoto"
+style="background:#b52d2d" hidden>
+Remover foto
+</button>
+`;
+
+$('arquivoFoto').before(areaFoto);
+
+function mostrarFoto(url){
+$('previaFoto').hidden = !url;
+$('tituloFoto').hidden = !url;
+$('btnRemoverFoto').hidden = !url;
+
+if(url){
+$('previaFoto').src = url;
+}else{
+$('previaFoto').removeAttribute('src');
+}
+}
+
+function limparPrevia(){
+if(urlPrevia){
+URL.revokeObjectURL(urlPrevia);
+urlPrevia = '';
+}
+}
+
+const editarAnterior = editarEmpresa;
+
+editarEmpresa = function(empresa){
+editarAnterior(empresa);
+limparPrevia();
+fotoAtual = empresa.foto || '';
+removerFoto = false;
+mostrarFoto(fotoAtual);
+};
+
+const novaAnterior = novaEmpresa;
+
+novaEmpresa = function(){
+novaAnterior();
+limparPrevia();
+fotoAtual = '';
+removerFoto = false;
+mostrarFoto('');
+};
+
+$('arquivoFoto').onchange = function(){
+limparPrevia();
+
+const arquivo = this.files[0];
+
+if(!arquivo){
+mostrarFoto(removerFoto ? '' : fotoAtual);
+return;
+}
+
+const tipos = [
+'image/jpeg',
+'image/png',
+'image/webp'
+];
+
+if(!tipos.includes(arquivo.type)
+|| arquivo.size > 5*1024*1024){
+
+$('status').textContent =
+'Escolha uma imagem JPG, PNG ou WEBP de até 5 MB.';
+
+this.value = '';
+mostrarFoto(removerFoto ? '' : fotoAtual);
+return;
+}
+
+removerFoto = false;
+urlPrevia = URL.createObjectURL(arquivo);
+mostrarFoto(urlPrevia);
+$('status').textContent = '';
+};
+
+$('btnRemoverFoto').onclick = function(){
+if(!confirm('Deseja remover esta foto?'))return;
+
+limparPrevia();
+removerFoto = true;
+$('arquivoFoto').value = '';
+mostrarFoto('');
+
+$('status').textContent =
+'Foto removida da prévia. Salve para confirmar.';
+};
+
+$('formEmpresa').onsubmit = async e=>{
+e.preventDefault();
+
+$('enviar').disabled = true;
+
+try{
+
+const {data:{user},error:erroUser} =
+await cliente.auth.getUser();
+
+if(erroUser || !user){
+throw new Error('Faça login novamente.');
+}
+
+const idEdicao = empresaEditando;
+
+let foto = removerFoto ? '' : fotoAtual;
+
+const arquivo = $('arquivoFoto').files[0];
+
+if(arquivo){
+
+const tipos = {
+'image/jpeg':'jpg',
+'image/png':'png',
+'image/webp':'webp'
+};
+
+const ext = tipos[arquivo.type];
+
+if(!ext || arquivo.size > 5*1024*1024){
+throw new Error('Imagem inválida ou maior que 5 MB.');
+}
+
+$('status').textContent = 'Enviando foto...';
+
+const caminho =
+user.id+'/'+crypto.randomUUID()+'.'+ext;
+
+const {error:erroFoto} = await cliente.storage
+.from('Fotos empresas')
+.upload(caminho,arquivo);
+
+if(erroFoto)throw erroFoto;
+
+foto = cliente.storage
+.from('Fotos empresas')
+.getPublicUrl(caminho).data.publicUrl;
+
+}
+
+const dados = {
+categoria:Number($('categoria').value),
+foto:foto
+};
+
+['nome','descricao','endereco','whatsapp',
+'telefone','instagram','site','horario']
+.forEach(c=>{
+dados[c] = $(c).value.trim();
+});
+
+if(!dados.nome){
+throw new Error('Informe o nome da empresa.');
+}
+
+if(idEdicao){
+
+const {error} = await cliente
+.from('empresas')
+.update(dados)
+.eq('id',idEdicao)
+.eq('user_id',user.id)
+.select('id')
+.single();
+
+if(error)throw error;
+
+}else{
+
+dados.id = crypto.randomUUID();
+dados.user_id = user.id;
+dados.aprovado = false;
+dados.destaque = false;
+dados.plano = 'basico';
+
+const {error} = await cliente
+.from('empresas')
+.insert(dados);
+
+if(error)throw error;
+
+}
+
+novaEmpresa();
+
+$('status').textContent = idEdicao
+?'Empresa atualizada com sucesso!'
+:'Empresa enviada para aprovação!';
+
+await carregarMinhasEmpresas();
+
+}catch(error){
+
+$('status').textContent =
+'Erro: '+error.message;
+
+}finally{
+
+$('enviar').disabled = false;
+
+}
+
+};
+
 </script>
 </body>
 </html>
