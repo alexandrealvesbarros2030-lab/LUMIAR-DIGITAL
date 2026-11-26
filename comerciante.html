@@ -31,8 +31,30 @@ a{color:#194c36}
 <input id="senha" type="password" placeholder="Senha">
 <button onclick="entrar()">Entrar</button>
 <button class="amarelo" onclick="criarConta()">Criar minha conta</button>
-<p id="mensagem"></p>
+<button class="amarelo" onclick="recuperarSenha()">
+Esqueci minha senha
+</button>
+ <p id="mensagem"></p>
 </section>
+
+<section id="recuperacao" hidden>
+<h2>Redefinir minha senha</h2>
+
+<label>Nova senha</label>
+<input id="novaSenha" type="password"
+placeholder="Nova senha" autocomplete="new-password">
+
+<label>Confirme a nova senha</label>
+<input id="confirmarSenha" type="password"
+placeholder="Confirme a senha" autocomplete="new-password">
+
+<button onclick="salvarNovaSenha()">
+Salvar nova senha
+</button>
+
+<p id="mensagemRecuperacao"></p>
+</section>
+
 
 <section id="painel" hidden>
 <h2>Cadastre sua empresa</h2>
@@ -590,6 +612,91 @@ $('enviar').disabled = false;
 }
 
 };
+
+async function recuperarSenha(){
+
+const email = $('email').value.trim();
+
+if(!email){
+$('mensagem').textContent =
+'Informe seu e-mail.';
+return;
+}
+
+const {error} =
+await cliente.auth.resetPasswordForEmail(email,{
+redirectTo:location.origin+location.pathname
+});
+
+$('mensagem').textContent = error
+? error.message
+: 'Confira seu e-mail para redefinir sua senha.';
+}
+
+let modoRecuperacao = false;
+
+const abrirPainelNormal = abrirPainel;
+
+abrirPainel = function(user){
+if(modoRecuperacao)return;
+abrirPainelNormal(user);
+};
+
+cliente.auth.onAuthStateChange((evento,sessao)=>{
+
+if(evento === 'PASSWORD_RECOVERY'){
+
+modoRecuperacao = true;
+
+$('login').hidden = true;
+$('painel').hidden = true;
+$('recuperacao').hidden = false;
+
+}
+
+});
+
+async function salvarNovaSenha(){
+
+const senha = $('novaSenha').value;
+const confirmar = $('confirmarSenha').value;
+
+if(senha.length < 8){
+
+$('mensagemRecuperacao').textContent =
+'A senha deve ter pelo menos 8 caracteres.';
+return;
+
+}
+
+if(senha !== confirmar){
+
+$('mensagemRecuperacao').textContent =
+'As senhas não coincidem.';
+return;
+
+}
+
+const {error} =
+await cliente.auth.updateUser({
+password:senha
+});
+
+if(error){
+
+$('mensagemRecuperacao').textContent =
+error.message;
+return;
+
+}
+
+await cliente.auth.signOut();
+
+alert('Senha alterada com sucesso!');
+
+location.href = location.pathname;
+
+}
 
 </script>
 </body>
