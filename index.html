@@ -1275,7 +1275,339 @@ alert(
 );
 
 });
+// SISTEMA DE PROMOCOES
 
+let promocoes = [];
+let erroPromocoes = false;
+
+function hojeLumiar(){
+return new Intl.DateTimeFormat('en-CA',{
+timeZone:'America/Sao_Paulo',
+year:'numeric',
+month:'2-digit',
+day:'2-digit'
+}).format(new Date());
+}
+
+async function carregarPromocoes(){
+
+const hoje = hojeLumiar();
+
+const campos = [
+'id',
+'empresa_id',
+'titulo',
+'descricao',
+'foto',
+'preco_original',
+'preco_promocional',
+'data_inicio',
+'data_fim',
+'aprovado',
+'destaque'
+].join(',');
+
+try{
+
+const resposta = await fetch(
+'https://fhclimiwecgxmgigibix.supabase.co/rest/v1/promocoes?select='+campos+
+'&aprovado=eq.true'+
+'&data_inicio=lte.'+hoje+
+'&data_fim=gte.'+hoje+
+'&order=destaque.desc',
+{
+cache:'no-store',
+headers:{
+apikey:'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
+}
+}
+);
+
+if(!resposta.ok){
+throw new Error('Erro ao carregar ofertas');
+}
+
+promocoes = await resposta.json();
+erroPromocoes = false;
+
+}catch(erro){
+
+console.error(erro);
+erroPromocoes = true;
+promocoes = [];
+
+}
+
+}
+
+function moedaPromocao(valor){
+
+return Number(valor).toLocaleString(
+'pt-BR',{
+style:'currency',
+currency:'BRL'
+});
+
+}
+
+function dataPromocao(data){
+
+return String(data||'')
+.split('-').reverse().join('/');
+
+}
+
+function ofertasValidas(){
+
+const hoje = hojeLumiar();
+
+return promocoes.filter(p=>{
+
+const empresa = empresas.find(e=>
+String(e.id)===String(p.empresa_id)
+);
+
+return empresa &&
+empresa.aprovado &&
+p.aprovado &&
+p.data_inicio<=hoje &&
+p.data_fim>=hoje;
+
+});
+
+}
+
+function mostrarPromocoes(lista,parent){
+
+if(!lista.length){
+
+el('p',
+erroPromocoes?
+'Não foi possível carregar as ofertas.':
+'Nenhuma promoção disponível no momento.',
+parent);
+
+return;
+
+}
+
+lista.forEach(p=>{
+
+const empresa = empresas.find(e=>
+String(e.id)===String(p.empresa_id)
+);
+
+if(!empresa)return;
+
+const card = el('article','',parent);
+
+card.className = 'entry';
+
+if(p.destaque){
+
+card.classList.add('premium-card');
+
+const selo = el(
+'div','⭐ OFERTA EM DESTAQUE',card
+);
+
+selo.className='selo-premium';
+
+}
+
+adicionarFoto({
+foto:p.foto,
+nome:p.titulo
+},card);
+
+el('h2',p.titulo,card);
+
+el('small',empresa.nome,card);
+
+el('p',p.descricao,card);
+
+const original = Number(p.preco_original);
+const promocional = Number(p.preco_promocional);
+
+if(original>0 && promocional>=0 &&
+promocional<original){
+
+const desconto = Math.round(
+(1-promocional/original)*100
+);
+
+const selo = el(
+'div',desconto+'% OFF',card
+);
+
+selo.style.cssText =
+'background:#b83232;color:white;padding:8px;border-radius:8px;display:inline-block;font-weight:bold';
+
+const antigo = el(
+'p','De '+moedaPromocao(original),card
+);
+
+antigo.style.textDecoration='line-through';
+
+}
+
+if(p.preco_promocional!=null){
+
+const preco = el(
+'h2','Por '+moedaPromocao(promocional),card
+);
+
+preco.style.cssText =
+'color:#194c36;font-size:28px';
+
+}
+
+el(
+'p',
+'📅 Válida até '+dataPromocao(p.data_fim),
+card
+);
+
+const url = whatsappURL(empresa.whatsapp);
+
+if(url){
+
+const b = btn(
+'💬 Aproveitar oferta',
+()=>window.open(
+url,'_blank','noopener,noreferrer'
+),
+card
+);
+
+b.style.cssText =
+'width:100%;background:#194c36;color:white';
+
+}
+
+});
+
+}
+
+function paginaPromocoes(){
+
+mode='promocoes';
+
+reset();
+
+btn('← Voltar',home);
+
+el('h2','🏷️ Promoções e ofertas');
+
+const busca = search(render);
+
+busca.placeholder='Buscar promoções...';
+
+const lista = el('section');
+
+function render(q=''){
+
+lista.replaceChildren();
+
+mostrarPromocoes(
+ofertasValidas().filter(p=>
+norm(
+(p.titulo||'')+' '+(p.descricao||'')
+).includes(norm(q))
+),
+lista
+);
+
+}
+
+render();
+
+}
+
+const openCatOriginal = openCat;
+
+openCat = function(k){
+
+if(k===7){
+
+paginaPromocoes();
+
+return;
+
+}
+
+openCatOriginal(k);
+
+};
+
+const homeOriginal = home;
+
+home = function(){
+
+homeOriginal();
+
+const ofertas = ofertasValidas()
+.filter(p=>p.destaque);
+
+if(!ofertas.length)return;
+
+const secao = document.createElement('section');
+
+el('h2','🔥 Ofertas em destaque',secao);
+
+mostrarPromocoes(ofertas,secao);
+
+const b = btn(
+'Ver todas as promoções',
+paginaPromocoes,
+secao
+);
+
+b.style.width='100%';
+
+const grid = app.querySelector('.grid');
+
+if(grid){
+
+grid.after(secao);
+
+}else{
+
+app.append(secao);
+
+}
+
+const busca = app.querySelector(
+'input[type="search"]'
+);
+
+if(busca){
+
+busca.addEventListener('input',()=>{
+
+secao.hidden=!!busca.value.trim();
+
+});
+
+}
+
+};
+
+carregarPromocoes().then(()=>{
+
+if(mode==='home'){
+
+home();
+
+}else if(mode==='promocoes'){
+
+paginaPromocoes();
+
+}
+
+});
+
+// FIM DO SISTEMA DE PROMOCOES
 </script>
 
 </body>
