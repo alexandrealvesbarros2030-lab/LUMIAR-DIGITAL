@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admin - Lumiar Digital</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f6f2;color:#194c36;font-family:Arial,sans-serif}
@@ -15,13 +16,18 @@ section,article{background:white;padding:18px;border-radius:15px;margin-bottom:1
 input,select,textarea{width:100%;padding:12px;margin:6px 0 14px;border:1px solid #ccc;border-radius:8px;font-size:16px}
 input[type=checkbox]{width:auto}
 button{background:#f5cf52;color:#194c36;border:0;padding:12px;border-radius:8px;font-size:15px;font-weight:bold;margin:4px;cursor:pointer}
+button:disabled{opacity:.5}
 .verde{background:#194c36;color:white}
 .vermelho{background:#b83232;color:white}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.numero{font-size:26px;font-weight:bold}
+.numero{font-size:24px;font-weight:bold;margin-top:10px}
+.pedido{background:#fff9e4;border:1px solid #e4c451;padding:15px;border-radius:12px;margin-bottom:12px}
 [hidden]{display:none!important}
+img{max-width:100%;border-radius:10px}
+a{color:#194c36}
 </style>
 </head>
+
 <body>
 
 <header>
@@ -30,42 +36,67 @@ button{background:#f5cf52;color:#194c36;border:0;padding:12px;border-radius:8px;
 </header>
 
 <main>
+
 <section id="login">
 <h2>Acesso administrativo</h2>
+
 <form id="formLogin">
 <input id="email" type="email" placeholder="E-mail" required>
 <input id="senha" type="password" placeholder="Senha" required>
 <button class="verde">Entrar</button>
 </form>
+
 <p id="mensagem"></p>
 </section>
 
 <div id="painel" hidden>
+
 <button onclick="sair()">Sair</button>
+<button onclick="carregar()">Atualizar painel</button>
 
 <div class="grid">
+
 <section>Total de empresas
 <div class="numero" id="total">0</div>
 </section>
+
 <section>Aprovadas
 <div class="numero" id="ativas">0</div>
 </section>
+
 <section>Pendentes
 <div class="numero" id="pendentes">0</div>
 </section>
+
 <section>Destaques
 <div class="numero" id="destaques">0</div>
 </section>
+
+<section>Solicitações de planos
+<div class="numero" id="totalPedidos">0</div>
+</section>
+
+<section>Receita mensal estimada
+<div class="numero" id="receita">R$ 0,00</div>
+</section>
+
 </div>
+
+<section>
+<h2>💰 Solicitações de planos</h2>
+<div id="pedidos"></div>
+</section>
 
 <section>
 <button class="verde" onclick="nova()">+ Cadastrar empresa</button>
 </section>
 
 <section id="cadastro" hidden>
+
 <h2 id="titulo">Cadastrar empresa</h2>
 
 <form id="formEmpresa">
+
 <input id="empresaId" type="hidden">
 
 <label>Nome da empresa</label>
@@ -81,7 +112,7 @@ button{background:#f5cf52;color:#194c36;border:0;padding:12px;border-radius:8px;
 <input id="endereco">
 
 <label>WhatsApp</label>
-<input id="whatsapp" type="tel" placeholder="5521999999999">
+<input id="whatsapp" type="tel">
 
 <label>Telefone</label>
 <input id="telefone" type="tel">
@@ -92,14 +123,14 @@ button{background:#f5cf52;color:#194c36;border:0;padding:12px;border-radius:8px;
 <label>Site</label>
 <input id="site">
 
-<label>Selecionar foto da empresa</label>
+<label>Selecionar foto</label>
 <input id="arquivoFoto" type="file"
 accept="image/jpeg,image/png,image/webp">
 
 <img id="previewFoto" hidden
-style="width:100%;max-height:250px;object-fit:contain;border-radius:10px;margin-bottom:15px">
+style="width:100%;max-height:250px;object-fit:contain">
 
-<label>Link da foto (opcional)</label>
+<label>Link da foto</label>
 <input id="foto" type="url">
 
 <p id="statusFoto"></p>
@@ -107,43 +138,60 @@ style="width:100%;max-height:250px;object-fit:contain;border-radius:10px;margin-
 <label>Horário de funcionamento</label>
 <input id="horario">
 
-<label>Plano comercial</label>
+<label>Plano ativo</label>
 <select id="plano">
 <option value="basico">Básico</option>
 <option value="profissional">Profissional</option>
 <option value="premium">Premium</option>
 </select>
 
-<p><label>
+<p>
+<label>
 <input type="checkbox" id="aprovado">
 Empresa aprovada
-</label></p>
+</label>
+</p>
 
-<p><label>
+<p>
+<label>
 <input type="checkbox" id="destaque">
 Empresa em destaque
-</label></p>
+</label>
+</p>
 
-<button class="verde">Salvar empresa</button>
+<button id="salvar" class="verde">Salvar empresa</button>
+
 <button type="button" onclick="fechar()">Cancelar</button>
+
 </form>
 </section>
 
 <section>
+
 <h2>Empresas cadastradas</h2>
+
 <input id="busca" placeholder="Buscar empresa..." oninput="listar()">
+
 <div id="lista"></div>
+
 </section>
+
 </div>
+
+<a href="index.html">← Voltar ao Lumiar Digital</a>
+
 </main>
 
 <script>
+
 const cliente = supabase.createClient(
 'https://fhclimiwecgxmgigibix.supabase.co',
 'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
 );
 
 const adminId = '35187a47-365b-436b-8a79-c77c3f15871b';
+
+const $ = id => document.getElementById(id);
 
 const categorias = [
 'Pousadas e chalés',
@@ -157,50 +205,34 @@ const categorias = [
 'Pontos turísticos'
 ];
 
-const $ = id => document.getElementById(id);
+const precos = {
+basico:19.90,
+profissional:39.90,
+premium:69.90
+};
+
+const nomesPlanos = {
+basico:'Básico',
+profissional:'Profissional',
+premium:'Premium'
+};
+
 let empresas = [];
-$('arquivoFoto').onchange = function(){
-const arquivo = this.files[0];
-$('previewFoto').hidden = true;
-$('statusFoto').textContent = '';
 
-if(!arquivo)return;
-
-if(arquivo.size > 5 * 1024 * 1024){
-alert('A foto deve ter até 5 MB.');
-this.value = '';
-return;
+function moeda(valor){
+return Number(valor).toLocaleString('pt-BR',{
+style:'currency',
+currency:'BRL'
+});
 }
 
-const leitor = new FileReader();
-leitor.onload = e => {
-$('previewFoto').src = e.target.result;
-$('previewFoto').hidden = false;
-};
-leitor.readAsDataURL(arquivo);
-};
+function nomePlano(plano){
+return nomesPlanos[plano] || 'Não definido';
+}
 
-async function enviarFoto(){
-const arquivo = $('arquivoFoto').files[0];
-if(!arquivo)return $('foto').value.trim();
-
-const extensao = arquivo.name.split('.').pop().toLowerCase();
-const caminho = crypto.randomUUID() + '.' + extensao;
-
-$('statusFoto').textContent = 'Enviando foto...';
-
-const {error} = await cliente.storage
-.from('Fotos empresas')
-.upload(caminho, arquivo);
-
-if(error)throw error;
-
-const {data} = cliente.storage
-.from('Fotos empresas')
-.getPublicUrl(caminho);
-
-$('statusFoto').textContent = 'Foto enviada com sucesso!';
-return data.publicUrl;
+function temPedido(e){
+return Object.hasOwn(precos,e.plano_solicitado)
+&& e.plano_solicitado !== e.plano;
 }
 
 categorias.forEach((nome,i)=>{
@@ -214,12 +246,12 @@ $('formLogin').onsubmit=async e=>{
 e.preventDefault();
 
 const {data,error}=await cliente.auth.signInWithPassword({
-email:$('email').value,
+email:$('email').value.trim(),
 password:$('senha').value
 });
 
 if(error){
-$('mensagem').textContent='Erro ao entrar: '+error.message;
+$('mensagem').textContent=error.message;
 return;
 }
 
@@ -232,6 +264,7 @@ return;
 $('login').hidden=true;
 $('painel').hidden=false;
 $('senha').value='';
+
 await carregar();
 };
 
@@ -241,6 +274,7 @@ location.reload();
 }
 
 async function carregar(){
+
 const {data,error}=await cliente
 .from('empresas')
 .select('*')
@@ -252,60 +286,225 @@ return;
 }
 
 empresas=data;
+
 $('total').textContent=empresas.length;
-$('ativas').textContent=empresas.filter(e=>e.aprovado).length;
-$('pendentes').textContent=empresas.filter(e=>!e.aprovado).length;
-$('destaques').textContent=empresas.filter(e=>e.destaque).length;
+
+$('ativas').textContent=
+empresas.filter(e=>e.aprovado).length;
+
+$('pendentes').textContent=
+empresas.filter(e=>!e.aprovado).length;
+
+$('destaques').textContent=
+empresas.filter(e=>e.destaque).length;
+
+$('totalPedidos').textContent=
+empresas.filter(temPedido).length;
+
+const receita=empresas
+.filter(e=>e.aprovado)
+.reduce((soma,e)=>soma+(precos[e.plano]||0),0);
+
+$('receita').textContent=moeda(receita);
+
+listarPedidos();
 listar();
 }
 
+function texto(tag,valor,pai){
+const elemento=document.createElement(tag);
+elemento.textContent=valor;
+pai.append(elemento);
+return elemento;
+}
+
+function botao(pai,nome,acao,classe=''){
+const b=document.createElement('button');
+b.type='button';
+b.textContent=nome;
+b.className=classe;
+b.onclick=async ()=>{
+b.disabled=true;
+try{
+await acao();
+}finally{
+b.disabled=false;
+}
+};
+pai.append(b);
+return b;
+}
+
+function listarPedidos(){
+
+const lista=$('pedidos');
+lista.replaceChildren();
+
+const pedidos=empresas.filter(temPedido);
+
+if(!pedidos.length){
+texto('p','Nenhuma solicitação pendente.',lista);
+return;
+}
+
+pedidos.forEach(e=>{
+
+const card=document.createElement('div');
+card.className='pedido';
+
+texto('h3',e.nome,card);
+
+texto('p',
+'Plano atual: '+nomePlano(e.plano),card);
+
+texto('p',
+'Plano solicitado: '+nomePlano(e.plano_solicitado),card);
+
+texto('h3',
+moeda(precos[e.plano_solicitado])+' / mês',card);
+
+texto('p','Status: Aguardando aprovação',card);
+
+botao(card,
+'Confirmar pagamento e ativar',
+()=>aprovarPlano(e),'verde');
+
+botao(card,
+'Recusar solicitação',
+()=>recusarPlano(e),'vermelho');
+
+lista.append(card);
+
+});
+}
+
+async function aprovarPlano(e){
+
+if(!temPedido(e))return;
+
+if(!confirm(
+'Você verificou o pagamento de '+
+e.nome+' e deseja ativar o plano '+
+nomePlano(e.plano_solicitado)+'?'
+))return;
+
+const {error}=await cliente
+.from('empresas')
+.update({
+plano:e.plano_solicitado
+})
+.eq('id',e.id)
+.eq('plano',e.plano)
+.eq('plano_solicitado',e.plano_solicitado)
+.select('id')
+.single();
+
+if(error){
+alert('Erro ao ativar plano: '+error.message);
+return;
+}
+
+alert('Plano ativado com sucesso!');
+
+await carregar();
+}
+
+async function recusarPlano(e){
+
+if(!confirm('Deseja recusar esta solicitação?'))return;
+
+const {error}=await cliente
+.from('empresas')
+.update({
+plano_solicitado:e.plano
+})
+.eq('id',e.id)
+.eq('plano',e.plano)
+.eq('plano_solicitado',e.plano_solicitado)
+.select('id')
+.single();
+
+if(error){
+alert('Erro: '+error.message);
+return;
+}
+
+alert('Solicitação recusada.');
+
+await carregar();
+}
+
 function listar(){
+
 const lista=$('lista');
 lista.replaceChildren();
 
 const busca=$('busca').value.toLowerCase();
 
-empresas.filter(e=>e.nome.toLowerCase().includes(busca))
-.forEach(e=>{
+empresas.filter(e=>
+e.nome.toLowerCase().includes(busca)
+).forEach(e=>{
+
 const card=document.createElement('article');
 
-const titulo=document.createElement('h3');
-titulo.textContent=e.nome;
-card.append(titulo);
+texto('h3',e.nome,card);
 
-const info=document.createElement('p');
-info.textContent=(categorias[e.categoria]||'Categoria')+
-' | '+(e.aprovado?'Aprovada':'Pendente')+
-' | '+(e.plano||'basico');
-card.append(info);
-
-function botao(texto,acao,classe){
-const b=document.createElement('button');
-b.textContent=texto;
-b.className=classe||'';
-b.onclick=acao;
-card.append(b);
+if(e.foto){
+const img=document.createElement('img');
+img.src=e.foto;
+img.alt=e.nome;
+img.style.cssText='width:100%;max-height:180px;object-fit:cover';
+card.append(img);
 }
 
-botao('Editar',()=>editar(e));
-botao(e.aprovado?'Desaprovar':'Aprovar',
-()=>atualizar(e.id,{aprovado:!e.aprovado}),'verde');
+texto('p',categorias[e.categoria]||'Categoria',card);
 
-botao(e.destaque?'Retirar destaque':'Destacar',
+texto('p',
+'Status: '+(e.aprovado?'Aprovada':'Pendente'),card);
+
+texto('p',
+'Plano ativo: '+nomePlano(e.plano),card);
+
+texto('p',
+'Plano solicitado: '+nomePlano(e.plano_solicitado),card);
+
+texto('p',
+'Mensalidade: '+moeda(precos[e.plano]||0),card);
+
+if(e.destaque){
+texto('p','⭐ Empresa em destaque',card);
+}
+
+botao(card,'Editar',()=>editar(e));
+
+botao(card,
+e.aprovado?'Desaprovar':'Aprovar',
+()=>atualizar(e.id,{aprovado:!e.aprovado}),
+'verde');
+
+botao(card,
+e.destaque?'Retirar destaque':'Destacar',
 ()=>atualizar(e.id,{destaque:!e.destaque}));
 
-botao('Excluir',()=>excluir(e.id),'vermelho');
+botao(card,'Excluir',
+()=>excluir(e.id),'vermelho');
 
 lista.append(card);
+
 });
 }
 
 function nova(){
+
 $('formEmpresa').reset();
 $('empresaId').value='';
 $('titulo').textContent='Cadastrar empresa';
+$('previewFoto').hidden=true;
+$('previewFoto').removeAttribute('src');
+$('statusFoto').textContent='';
 $('cadastro').hidden=false;
 $('cadastro').scrollIntoView();
+
 }
 
 function fechar(){
@@ -313,7 +512,9 @@ $('cadastro').hidden=true;
 }
 
 function editar(e){
+
 nova();
+
 $('titulo').textContent='Editar empresa';
 $('empresaId').value=e.id;
 
@@ -325,71 +526,195 @@ $(c).value=e[c]??'';
 
 $('aprovado').checked=!!e.aprovado;
 $('destaque').checked=!!e.destaque;
+
+if(e.foto){
+$('previewFoto').src=e.foto;
+$('previewFoto').hidden=false;
+}
+
+}
+
+$('arquivoFoto').onchange=function(){
+
+const arquivo=this.files[0];
+
+if(!arquivo)return;
+
+const tipos=['image/jpeg','image/png','image/webp'];
+
+if(!tipos.includes(arquivo.type)
+||arquivo.size>5*1024*1024){
+
+alert('Escolha uma imagem JPG, PNG ou WEBP de até 5 MB.');
+
+this.value='';
+return;
+
+}
+
+const leitor=new FileReader();
+
+leitor.onload=e=>{
+$('previewFoto').src=e.target.result;
+$('previewFoto').hidden=false;
+};
+
+leitor.readAsDataURL(arquivo);
+
+};
+
+async function enviarFoto(){
+
+const arquivo=$('arquivoFoto').files[0];
+
+if(!arquivo)return $('foto').value.trim();
+
+const tipos={
+'image/jpeg':'jpg',
+'image/png':'png',
+'image/webp':'webp'
+};
+
+const ext=tipos[arquivo.type];
+
+if(!ext||arquivo.size>5*1024*1024){
+throw new Error('Foto inválida.');
+}
+
+const caminho=crypto.randomUUID()+'.'+ext;
+
+$('statusFoto').textContent='Enviando foto...';
+
+const {error}=await cliente.storage
+.from('Fotos empresas')
+.upload(caminho,arquivo);
+
+if(error)throw error;
+
+const {data}=cliente.storage
+.from('Fotos empresas')
+.getPublicUrl(caminho);
+
+$('statusFoto').textContent='Foto enviada!';
+
+return data.publicUrl;
+
 }
 
 $('formEmpresa').onsubmit=async ev=>{
+
 ev.preventDefault();
+
+$('salvar').disabled=true;
+
+try{
 
 const dados={};
 
 ['nome','descricao','endereco','whatsapp',
-'telefone','instagram','site','foto',
-'horario','plano'].forEach(c=>{
+'telefone','instagram','site','horario','plano']
+.forEach(c=>{
 dados[c]=$(c).value.trim();
 });
-try {
-dados.foto = await enviarFoto();
-} catch(error) {
-alert('Erro ao enviar foto: ' + error.message);
-return;
-}
+
+dados.foto=await enviarFoto();
+
 dados.categoria=Number($('categoria').value);
 dados.aprovado=$('aprovado').checked;
 dados.destaque=$('destaque').checked;
 
 const id=$('empresaId').value;
 
-const consulta=id
-?cliente.from('empresas').update(dados).eq('id',id)
-:cliente.from('empresas').insert({
-...dados,id:crypto.randomUUID()
-});
+let consulta;
+
+if(id){
+
+const anterior=empresas.find(e=>e.id===id);
+
+if(anterior && anterior.plano!==dados.plano){
+
+if(!confirm('Confirma a alteração manual do plano ativo?')){
+return;
+}
+
+dados.plano_solicitado=dados.plano;
+
+}
+
+consulta=cliente.from('empresas')
+.update(dados)
+.eq('id',id);
+
+}else{
+
+dados.id=crypto.randomUUID();
+dados.plano_solicitado=dados.plano;
+
+consulta=cliente.from('empresas')
+.insert(dados);
+
+}
 
 const {error}=await consulta.select('id').single();
 
-if(error){
-alert('Erro ao salvar: '+error.message);
-return;
-}
+if(error)throw error;
 
 alert('Empresa salva com sucesso!');
+
 fechar();
+
 await carregar();
+
+}catch(error){
+
+alert('Erro ao salvar: '+error.message);
+
+}finally{
+
+$('salvar').disabled=false;
+
+}
+
 };
 
 async function atualizar(id,dados){
-const {error}=await cliente.from('empresas')
-.update(dados).eq('id',id).select('id').single();
+
+const {error}=await cliente
+.from('empresas')
+.update(dados)
+.eq('id',id)
+.select('id')
+.single();
 
 if(error){
 alert(error.message);
 return;
 }
+
 await carregar();
+
 }
 
 async function excluir(id){
+
 if(!confirm('Deseja realmente excluir esta empresa?'))return;
 
-const {error}=await cliente.from('empresas')
-.delete().eq('id',id).select('id').single();
+const {error}=await cliente
+.from('empresas')
+.delete()
+.eq('id',id)
+.select('id')
+.single();
 
 if(error){
 alert(error.message);
 return;
 }
+
 await carregar();
+
 }
+
 </script>
 </body>
 </html>
