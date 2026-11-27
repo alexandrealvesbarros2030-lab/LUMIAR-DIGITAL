@@ -698,6 +698,51 @@ location.href = location.pathname;
 
 }
 
+const areaPlano = document.createElement('div');
+
+areaPlano.innerHTML = `
+<label>Plano comercial desejado</label>
+
+<select id="planoSolicitado">
+<option value="basico">
+Básico - R$ 19,90/mês
+</option>
+
+<option value="profissional">
+Profissional - R$ 39,90/mês
+</option>
+
+<option value="premium">
+Premium - R$ 69,90/mês
+</option>
+</select>
+
+<p id="infoPlano">
+A ativação do plano depende da aprovação
+do administrador.
+</p>
+`;
+
+$('enviar').before(areaPlano);
+
+const editarComPlano = editarEmpresa;
+
+editarEmpresa = function(empresa){
+editarComPlano(empresa);
+
+$('planoSolicitado').value =
+empresa.plano_solicitado ||
+empresa.plano ||
+'basico';
+};
+
+const novaComPlano = novaEmpresa;
+
+novaEmpresa = function(){
+novaComPlano();
+$('planoSolicitado').value = 'basico';
+};
+
 </script>
 </body>
 </html>
