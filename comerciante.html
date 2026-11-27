@@ -1,70 +1,198 @@
- 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Comerciante - Lumiar Digital</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f3f6f2;color:#194c36;font-family:Arial,sans-serif}
-header{background:#194c36;color:white;padding:25px;text-align:center}
-main{max-width:700px;margin:auto;padding:16px}
-section{background:white;padding:20px;border-radius:15px;margin-bottom:15px}
-input,select,textarea{width:100%;padding:13px;margin:8px 0 15px;border:1px solid #ccc;border-radius:8px;font-size:16px}
-button{width:100%;background:#194c36;color:white;border:0;padding:15px;border-radius:10px;font-size:16px;font-weight:bold;margin:5px 0}
-.amarelo{background:#f5cf52;color:#194c36}
+
+body{
+margin:0;
+background:#f3f6f2;
+color:#194c36;
+font-family:Arial,sans-serif
+}
+
+header{
+background:linear-gradient(135deg,#123d2b,#32764e);
+color:white;
+padding:25px;
+text-align:center
+}
+
+header p{color:#f5cf52}
+
+main{
+max-width:700px;
+margin:auto;
+padding:16px
+}
+
+section{
+background:white;
+padding:20px;
+border-radius:15px;
+margin-bottom:15px
+}
+
+input,select,textarea{
+width:100%;
+padding:13px;
+margin:8px 0 15px;
+border:1px solid #ccc;
+border-radius:8px;
+font-size:16px
+}
+
+button{
+width:100%;
+background:#194c36;
+color:white;
+border:0;
+padding:15px;
+border-radius:10px;
+font-size:16px;
+font-weight:bold;
+margin:5px 0;
+cursor:pointer
+}
+
+button:disabled{opacity:.6}
+
+.amarelo{
+background:#f5cf52;
+color:#194c36
+}
+
+.vermelho{
+background:#b52d2d;
+color:white
+}
+
+.empresa{
+background:#f3f6f2;
+padding:15px;
+border-radius:12px;
+margin-bottom:12px
+}
+
+.planoBox{
+background:#f3f6f2;
+border:1px solid #ddd;
+border-radius:12px;
+padding:15px;
+margin:15px 0
+}
+
+.preco{
+font-size:28px;
+font-weight:bold;
+color:#194c36
+}
+
+img{
+width:100%;
+max-height:250px;
+object-fit:cover;
+border-radius:12px;
+margin-bottom:12px
+}
+
 [hidden]{display:none!important}
+
 a{color:#194c36}
+
+small{line-height:1.5}
+
 </style>
 </head>
+
 <body>
+
 <header>
 <h1>🏔️ Lumiar Digital</h1>
 <p>Área do comerciante</p>
 </header>
+
 <main>
+
 <section id="login">
+
 <h2>Acesse sua conta</h2>
-<input id="email" type="email" placeholder="E-mail">
-<input id="senha" type="password" placeholder="Senha">
+
+<input id="email" type="email"
+placeholder="E-mail" autocomplete="email">
+
+<input id="senha" type="password"
+placeholder="Senha" autocomplete="current-password">
+
 <button onclick="entrar()">Entrar</button>
-<button class="amarelo" onclick="criarConta()">Criar minha conta</button>
+
+<button class="amarelo" onclick="criarConta()">
+Criar minha conta
+</button>
+
 <button class="amarelo" onclick="recuperarSenha()">
 Esqueci minha senha
 </button>
- <p id="mensagem"></p>
+
+<p id="mensagem"></p>
+
 </section>
 
 <section id="recuperacao" hidden>
+
 <h2>Redefinir minha senha</h2>
 
 <label>Nova senha</label>
 <input id="novaSenha" type="password"
-placeholder="Nova senha" autocomplete="new-password">
+autocomplete="new-password">
 
 <label>Confirme a nova senha</label>
 <input id="confirmarSenha" type="password"
-placeholder="Confirme a senha" autocomplete="new-password">
+autocomplete="new-password">
 
 <button onclick="salvarNovaSenha()">
 Salvar nova senha
 </button>
 
 <p id="mensagemRecuperacao"></p>
+
 </section>
 
+<div id="painel" hidden>
 
-<section id="painel" hidden>
-<h2>Cadastre sua empresa</h2>
+<section>
+
+<h2>Minha conta</h2>
 <p id="usuario"></p>
 
+<h2>Minhas empresas</h2>
+
+<div id="minhasEmpresas"></div>
+
+<button class="amarelo" onclick="novaEmpresa()">
++ Cadastrar nova empresa
+</button>
+
+</section>
+
+<section>
+
+<h2 id="tituloFormulario">Cadastre sua empresa</h2>
+
 <form id="formEmpresa">
+
 <label>Nome da empresa</label>
 <input id="nome" required>
 
 <label>Categoria</label>
+
 <select id="categoria">
 <option value="0">Pousadas e chalés</option>
 <option value="1">Restaurantes e bares</option>
@@ -78,7 +206,7 @@ Salvar nova senha
 </select>
 
 <label>Descrição</label>
-<textarea id="descricao"></textarea>
+<textarea id="descricao" rows="4"></textarea>
 
 <label>Endereço</label>
 <input id="endereco">
@@ -99,20 +227,80 @@ Salvar nova senha
 <input id="horario">
 
 <label>Foto da empresa</label>
-<input id="arquivoFoto" type="file" accept="image/jpeg,image/png,image/webp">
 
-<p>Envie somente fotos autorizadas para divulgação pública.</p>
+<img id="previaFoto" hidden>
 
-<button id="enviar">Enviar para aprovação</button>
+<button type="button" id="btnRemoverFoto"
+class="vermelho" hidden>
+Remover foto
+</button>
+
+<input id="arquivoFoto" type="file"
+accept="image/jpeg,image/png,image/webp">
+
+<small>
+Envie somente fotos autorizadas para divulgação pública.
+Tamanho máximo de 5 MB.
+</small>
+
+<div class="planoBox">
+
+<h3>Escolha seu plano comercial</h3>
+
+<label>Plano desejado</label>
+
+<select id="planoSolicitado">
+
+<option value="basico">
+Básico - R$ 19,90/mês
+</option>
+
+<option value="profissional">
+Profissional - R$ 39,90/mês
+</option>
+
+<option value="premium">
+Premium - R$ 69,90/mês
+</option>
+
+</select>
+
+<div id="detalhesPlano"></div>
+
+<p>
+<small>
+A solicitação não gera cobrança automática.
+A ativação depende da confirmação do pagamento
+e da aprovação do administrador.
+</small>
+</p>
+
+</div>
+
+<button id="enviar" type="submit">
+Enviar para aprovação
+</button>
+
 </form>
+
 <p id="status"></p>
-<button class="amarelo" onclick="sair()">Sair</button>
+
+<button class="amarelo" onclick="sair()">
+Sair
+</button>
+
 </section>
 
-<a href="./index.html">← Voltar ao Lumiar Digital</a>
+</div>
+
+<a href="./index.html">
+← Voltar ao Lumiar Digital
+</a>
+
 </main>
 
 <script>
+
 const cliente = supabase.createClient(
 'https://fhclimiwecgxmgigibix.supabase.co',
 'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
@@ -120,137 +308,185 @@ const cliente = supabase.createClient(
 
 const $ = id => document.getElementById(id);
 
+let empresaEditando = null;
+let fotoAtual = '';
+let removerFoto = false;
+let urlPrevia = '';
+
+let modoRecuperacao =
+new URLSearchParams(
+location.hash.substring(1)
+).get('type') === 'recovery';
+
+const planos = {
+
+basico:{
+nome:'Básico',
+preco:'19,90',
+beneficios:[
+'Cadastro comercial',
+'Foto da empresa',
+'WhatsApp e telefone',
+'Localização e horário'
+]
+},
+
+profissional:{
+nome:'Profissional',
+preco:'39,90',
+beneficios:[
+'Todos os benefícios do Básico',
+'Instagram e site',
+'Divulgação de promoções',
+'Destaque na categoria'
+]
+},
+
+premium:{
+nome:'Premium',
+preco:'69,90',
+beneficios:[
+'Todos os benefícios do Profissional',
+'Destaque na página inicial',
+'Banner publicitário',
+'Prioridade nas pesquisas'
+]
+}
+
+};
+
+function atualizarPlano(){
+
+const plano = planos[$('planoSolicitado').value];
+
+$('detalhesPlano').replaceChildren();
+
+const preco = document.createElement('div');
+
+preco.className = 'preco';
+
+preco.textContent =
+'R$ '+plano.preco+'/mês';
+
+$('detalhesPlano').appendChild(preco);
+
+plano.beneficios.forEach(item=>{
+
+const p = document.createElement('p');
+
+p.textContent = '✓ '+item;
+
+$('detalhesPlano').appendChild(p);
+
+});
+
+}
+
+$('planoSolicitado').onchange = atualizarPlano;
+
+atualizarPlano();
+
 async function criarConta(){
-const {error}=await cliente.auth.signUp({
-email:$('email').value.trim(),
-password:$('senha').value,
+
+const email = $('email').value.trim();
+const senha = $('senha').value;
+
+if(!email || senha.length < 8){
+
+$('mensagem').textContent =
+'Informe seu e-mail e uma senha de pelo menos 8 caracteres.';
+
+return;
+
+}
+
+const {data,error} = await cliente.auth.signUp({
+
+email:email,
+
+password:senha,
+
 options:{
 emailRedirectTo:location.origin+location.pathname
 }
-});
 
-$('mensagem').textContent=error
-?error.message
-:'Confira seu e-mail para confirmar o cadastro.';
-}
-
-async function entrar(){
-const {data,error}=await cliente.auth.signInWithPassword({
-email:$('email').value.trim(),
-password:$('senha').value
 });
 
 if(error){
-$('mensagem').textContent=error.message;
+
+$('mensagem').textContent = error.message;
 return;
+
 }
+
+if(data.session){
+
+abrirPainel(data.session.user);
+
+}else{
+
+$('mensagem').textContent =
+'Confira seu e-mail para confirmar o cadastro.';
+
+}
+
+}
+
+async function entrar(){
+
+const {data,error} =
+await cliente.auth.signInWithPassword({
+
+email:$('email').value.trim(),
+password:$('senha').value
+
+});
+
+if(error){
+
+$('mensagem').textContent =
+'Erro ao entrar: '+error.message;
+
+return;
+
+}
+
 abrirPainel(data.user);
+
 }
 
 function abrirPainel(user){
-$('login').hidden=true;
-$('painel').hidden=false;
-$('usuario').textContent=user.email;
-$('senha').value='';
+
+if(modoRecuperacao)return;
+
+$('login').hidden = true;
+$('recuperacao').hidden = true;
+$('painel').hidden = false;
+
+$('usuario').textContent = user.email;
+$('senha').value = '';
+
+carregarMinhasEmpresas();
+
 }
 
 async function sair(){
-await cliente.auth.signOut();
-location.reload();
+
+const {error} = await cliente.auth.signOut();
+
+if(error){
+
+alert(error.message);
+return;
+
 }
 
-$('formEmpresa').onsubmit=async e=>{
-e.preventDefault();
-$('enviar').disabled=true;
+location.href = location.pathname;
 
-try{
-const {data:{user}}=await cliente.auth.getUser();
-
-if(!user)throw new Error('Faça login novamente.');
-
-let foto='';
-const arquivo=$('arquivoFoto').files[0];
-
-if(arquivo){
-const tipos={
-'image/jpeg':'jpg',
-'image/png':'png',
-'image/webp':'webp'
-};
-
-const ext=tipos[arquivo.type];
-
-if(!ext || arquivo.size>5*1024*1024){
-throw new Error('Escolha uma imagem JPG, PNG ou WEBP de até 5 MB.');
 }
-
-$('status').textContent='Enviando foto...';
-
-const caminho=user.id+'/'+crypto.randomUUID()+'.'+ext;
-
-const {error}=await cliente.storage
-.from('Fotos empresas')
-.upload(caminho,arquivo);
-
-if(error)throw error;
-
-foto=cliente.storage
-.from('Fotos empresas')
-.getPublicUrl(caminho).data.publicUrl;
-}
-
-const dados={
-id:crypto.randomUUID(),
-categoria:Number($('categoria').value),
-foto:foto,
-aprovado:false,
-destaque:false,
-plano:'basico'
-};
-
-['nome','descricao','endereco','whatsapp',
-'telefone','instagram','site','horario']
-.forEach(c=>dados[c]=$(c).value.trim());
-
-const {error}=await cliente
-.from('empresas')
-.insert(dados);
-
-if(error)throw error;
-
-$('status').textContent='Empresa enviada com sucesso! Aguarde a aprovação do administrador.';
-$('formEmpresa').reset();
-
-}catch(error){
-$('status').textContent='Erro: '+error.message;
-}finally{
-$('enviar').disabled=false;
-}
-};
-
-cliente.auth.getSession().then(({data})=>{
-if(data.session)abrirPainel(data.session.user);
-});
-
-cliente.auth.onAuthStateChange((evento,sessao)=>{
-if(sessao)abrirPainel(sessao.user);
-});
- let empresaEditando = null;
-
-const painelEmpresas = document.createElement('div');
-painelEmpresas.innerHTML = `
-<h2>Minhas empresas</h2>
-<div id="minhasEmpresas"></div>
-<button class="amarelo" type="button"
-onclick="novaEmpresa()">
-+ Cadastrar nova empresa
-</button>
-<hr>
-`;
-
-$('painel').prepend(painelEmpresas);
 
 async function carregarMinhasEmpresas(){
+
 const {data:{user}} =
 await cliente.auth.getUser();
 
@@ -263,204 +499,230 @@ const {data,error} = await cliente
 .order('criado_em',{ascending:false});
 
 const lista = $('minhasEmpresas');
+
 lista.replaceChildren();
 
 if(error){
-lista.textContent=error.message;
+
+lista.textContent = error.message;
 return;
+
 }
 
 if(!data.length){
-lista.textContent='Nenhuma empresa cadastrada.';
+
+lista.textContent =
+'Nenhuma empresa cadastrada.';
+
 return;
+
 }
 
 data.forEach(empresa=>{
-const card=document.createElement('div');
-card.style.cssText=
-'background:#f3f6f2;padding:15px;border-radius:12px;margin-bottom:12px';
 
-const titulo=document.createElement('h3');
-titulo.textContent=empresa.nome;
+const card = document.createElement('div');
 
-const status=document.createElement('p');
-status.textContent=empresa.aprovado
-?'Status: Aprovada'
-:'Status: Aguardando aprovação';
+card.className = 'empresa';
 
-const plano=document.createElement('p');
-plano.textContent='Plano: '+empresa.plano;
+if(empresa.foto){
 
-const botao=document.createElement('button');
-botao.type='button';
-botao.className='amarelo';
-botao.textContent='Editar minha empresa';
-botao.onclick=()=>editarEmpresa(empresa);
+const img = document.createElement('img');
 
-card.append(titulo,status,plano,botao);
-lista.appendChild(card);
-});
+img.src = empresa.foto;
+img.alt = empresa.nome;
+
+card.appendChild(img);
+
 }
 
-function editarEmpresa(empresa){
-empresaEditando=empresa.id;
+const titulo = document.createElement('h3');
 
-$('formEmpresa').reset();
+titulo.textContent = empresa.nome;
 
-['nome','categoria','descricao','endereco',
-'whatsapp','telefone','instagram','site',
-'horario'].forEach(c=>{
-$(c).value=empresa[c]??'';
-});
+const status = document.createElement('p');
 
-$('enviar').textContent='Salvar alterações';
-$('status').textContent='';
-$('formEmpresa').scrollIntoView({
-behavior:'smooth'
-});
-}
+status.textContent = empresa.aprovado
+?'🟢 Empresa aprovada'
+:'🟡 Aguardando aprovação';
 
-function novaEmpresa(){
-empresaEditando=null;
-$('formEmpresa').reset();
-$('enviar').textContent='Enviar para aprovação';
-$('status').textContent='';
-$('formEmpresa').scrollIntoView({
-behavior:'smooth'
-});
-}
+const planoAtivo = document.createElement('p');
 
-const abrirPainelOriginal=abrirPainel;
+planoAtivo.textContent =
+'Plano ativo: '+
+(planos[empresa.plano]?.nome || 'Básico');
 
-abrirPainel=function(user){
-abrirPainelOriginal(user);
-setTimeout(carregarMinhasEmpresas,0);
-};
+const solicitado = document.createElement('p');
 
-const cadastroOriginal=$('formEmpresa').onsubmit;
+solicitado.textContent =
+'Plano solicitado: '+
+(planos[empresa.plano_solicitado]?.nome || 'Básico');
 
-$('formEmpresa').onsubmit=async e=>{
-e.preventDefault();
-
-if(!empresaEditando){
-await cadastroOriginal(e);
-await carregarMinhasEmpresas();
-return;
-}
-
-$('enviar').disabled=true;
-
-try{
-const {data:{user}}=
-await cliente.auth.getUser();
-
-if(!user)throw new Error('Faça login novamente.');
-
-const dados={
-categoria:Number($('categoria').value)
-};
-
-['nome','descricao','endereco','whatsapp',
-'telefone','instagram','site','horario']
-.forEach(c=>dados[c]=$(c).value.trim());
-
-if($('arquivoFoto').files.length){
-throw new Error(
-'A troca de foto ainda não está disponível na edição.'
+card.append(
+titulo,
+status,
+planoAtivo,
+solicitado
 );
+
+if(empresa.plano_solicitado &&
+empresa.plano_solicitado !== empresa.plano){
+
+const aviso = document.createElement('p');
+
+aviso.textContent =
+'🟡 Alteração de plano aguardando análise.';
+
+card.appendChild(aviso);
+
 }
 
-const {data,error}=await cliente
-.from('empresas')
-.update(dados)
-.eq('id',empresaEditando)
-.eq('user_id',user.id)
-.select('id')
-.single();
+const botao = document.createElement('button');
 
-if(error)throw error;
+botao.type = 'button';
+botao.className = 'amarelo';
+botao.textContent = 'Editar minha empresa';
 
-novaEmpresa();
-$('status').textContent=
-'Empresa atualizada com sucesso!';
+botao.onclick = ()=>editarEmpresa(empresa);
 
-await carregarMinhasEmpresas();
+card.appendChild(botao);
 
-}catch(error){
-$('status').textContent='Erro: '+error.message;
-}finally{
-$('enviar').disabled=false;
+lista.appendChild(card);
+
+});
+
 }
-};
-let fotoAtual = '';
-let removerFoto = false;
-let urlPrevia = '';
-
-const areaFoto = document.createElement('div');
-
-areaFoto.innerHTML = `
-<p id="tituloFoto" hidden>Foto da empresa</p>
-
-<img id="previaFoto" hidden
-style="width:100%;max-height:250px;
-object-fit:cover;border-radius:12px;
-margin-bottom:12px">
-
-<button type="button" id="btnRemoverFoto"
-style="background:#b52d2d" hidden>
-Remover foto
-</button>
-`;
-
-$('arquivoFoto').before(areaFoto);
 
 function mostrarFoto(url){
+
 $('previaFoto').hidden = !url;
-$('tituloFoto').hidden = !url;
 $('btnRemoverFoto').hidden = !url;
 
 if(url){
+
 $('previaFoto').src = url;
+
 }else{
+
 $('previaFoto').removeAttribute('src');
+
 }
+
 }
 
 function limparPrevia(){
+
 if(urlPrevia){
+
 URL.revokeObjectURL(urlPrevia);
 urlPrevia = '';
-}
+
 }
 
-const editarAnterior = editarEmpresa;
+}
 
-editarEmpresa = function(empresa){
-editarAnterior(empresa);
+function editarEmpresa(empresa){
+
+empresaEditando = empresa.id;
+
+$('formEmpresa').reset();
+
+[
+'nome',
+'categoria',
+'descricao',
+'endereco',
+'whatsapp',
+'telefone',
+'instagram',
+'site',
+'horario'
+].forEach(c=>{
+
+$(c).value = empresa[c] ?? '';
+
+});
+
 limparPrevia();
+
 fotoAtual = empresa.foto || '';
 removerFoto = false;
+
 mostrarFoto(fotoAtual);
-};
 
-const novaAnterior = novaEmpresa;
+$('planoSolicitado').value =
+empresa.plano_solicitado ||
+empresa.plano ||
+'basico';
 
-novaEmpresa = function(){
-novaAnterior();
+atualizarPlano();
+
+$('tituloFormulario').textContent =
+'Editar minha empresa';
+
+$('enviar').textContent =
+'Salvar alterações';
+
+$('status').textContent = '';
+
+$('formEmpresa').scrollIntoView({
+behavior:'smooth'
+});
+
+}
+
+function novaEmpresa(rolar=true){
+
+empresaEditando = null;
+
+$('formEmpresa').reset();
+
 limparPrevia();
+
 fotoAtual = '';
 removerFoto = false;
+
 mostrarFoto('');
-};
+
+const planoURL =
+new URLSearchParams(location.search).get('plano');
+
+$('planoSolicitado').value =
+Object.hasOwn(planos,planoURL)
+?planoURL
+:'basico';
+
+atualizarPlano();
+
+$('tituloFormulario').textContent =
+'Cadastre sua empresa';
+
+$('enviar').textContent =
+'Enviar para aprovação';
+
+$('status').textContent = '';
+
+if(rolar){
+
+$('formEmpresa').scrollIntoView({
+behavior:'smooth'
+});
+
+}
+
+}
 
 $('arquivoFoto').onchange = function(){
+
 limparPrevia();
 
 const arquivo = this.files[0];
 
 if(!arquivo){
-mostrarFoto(removerFoto ? '' : fotoAtual);
+
+mostrarFoto(removerFoto?'':fotoAtual);
+
 return;
+
 }
 
 const tipos = [
@@ -469,36 +731,49 @@ const tipos = [
 'image/webp'
 ];
 
-if(!tipos.includes(arquivo.type)
-|| arquivo.size > 5*1024*1024){
+if(!tipos.includes(arquivo.type) ||
+arquivo.size > 5*1024*1024){
 
 $('status').textContent =
 'Escolha uma imagem JPG, PNG ou WEBP de até 5 MB.';
 
 this.value = '';
-mostrarFoto(removerFoto ? '' : fotoAtual);
+
+mostrarFoto(removerFoto?'':fotoAtual);
+
 return;
+
 }
 
 removerFoto = false;
+
 urlPrevia = URL.createObjectURL(arquivo);
+
 mostrarFoto(urlPrevia);
+
 $('status').textContent = '';
+
 };
 
 $('btnRemoverFoto').onclick = function(){
+
 if(!confirm('Deseja remover esta foto?'))return;
 
 limparPrevia();
+
 removerFoto = true;
+
 $('arquivoFoto').value = '';
+
 mostrarFoto('');
 
 $('status').textContent =
 'Foto removida da prévia. Salve para confirmar.';
+
 };
 
 $('formEmpresa').onsubmit = async e=>{
+
 e.preventDefault();
 
 $('enviar').disabled = true;
@@ -509,12 +784,14 @@ const {data:{user},error:erroUser} =
 await cliente.auth.getUser();
 
 if(erroUser || !user){
+
 throw new Error('Faça login novamente.');
+
 }
 
 const idEdicao = empresaEditando;
 
-let foto = removerFoto ? '' : fotoAtual;
+let foto = removerFoto?'':fotoAtual;
 
 const arquivo = $('arquivoFoto').files[0];
 
@@ -529,10 +806,13 @@ const tipos = {
 const ext = tipos[arquivo.type];
 
 if(!ext || arquivo.size > 5*1024*1024){
+
 throw new Error('Imagem inválida ou maior que 5 MB.');
+
 }
 
-$('status').textContent = 'Enviando foto...';
+$('status').textContent =
+'Enviando foto...';
 
 const caminho =
 user.id+'/'+crypto.randomUUID()+'.'+ext;
@@ -550,18 +830,40 @@ foto = cliente.storage
 }
 
 const dados = {
+
 categoria:Number($('categoria').value),
-foto:foto
+
+foto:foto,
+
+plano_solicitado:$('planoSolicitado').value
+
 };
 
-['nome','descricao','endereco','whatsapp',
-'telefone','instagram','site','horario']
-.forEach(c=>{
+[
+'nome',
+'descricao',
+'endereco',
+'whatsapp',
+'telefone',
+'instagram',
+'site',
+'horario'
+].forEach(c=>{
+
 dados[c] = $(c).value.trim();
+
 });
 
 if(!dados.nome){
+
 throw new Error('Informe o nome da empresa.');
+
+}
+
+if(!Object.hasOwn(planos,dados.plano_solicitado)){
+
+throw new Error('Plano inválido.');
+
 }
 
 if(idEdicao){
@@ -592,7 +894,7 @@ if(error)throw error;
 
 }
 
-novaEmpresa();
+novaEmpresa(false);
 
 $('status').textContent = idEdicao
 ?'Empresa atualizada com sucesso!'
@@ -618,33 +920,28 @@ async function recuperarSenha(){
 const email = $('email').value.trim();
 
 if(!email){
+
 $('mensagem').textContent =
 'Informe seu e-mail.';
+
 return;
+
 }
 
 const {error} =
 await cliente.auth.resetPasswordForEmail(email,{
+
 redirectTo:location.origin+location.pathname
+
 });
 
 $('mensagem').textContent = error
-? error.message
-: 'Confira seu e-mail para redefinir sua senha.';
+?error.message
+:'Confira seu e-mail para redefinir sua senha.';
+
 }
 
-let modoRecuperacao = false;
-
-const abrirPainelNormal = abrirPainel;
-
-abrirPainel = function(user){
-if(modoRecuperacao)return;
-abrirPainelNormal(user);
-};
-
-cliente.auth.onAuthStateChange((evento,sessao)=>{
-
-if(evento === 'PASSWORD_RECOVERY'){
+function abrirRecuperacao(){
 
 modoRecuperacao = true;
 
@@ -653,8 +950,6 @@ $('painel').hidden = true;
 $('recuperacao').hidden = false;
 
 }
-
-});
 
 async function salvarNovaSenha(){
 
@@ -665,6 +960,7 @@ if(senha.length < 8){
 
 $('mensagemRecuperacao').textContent =
 'A senha deve ter pelo menos 8 caracteres.';
+
 return;
 
 }
@@ -673,19 +969,25 @@ if(senha !== confirmar){
 
 $('mensagemRecuperacao').textContent =
 'As senhas não coincidem.';
+
 return;
 
 }
 
+if(!modoRecuperacao)return;
+
 const {error} =
 await cliente.auth.updateUser({
+
 password:senha
+
 });
 
 if(error){
 
 $('mensagemRecuperacao').textContent =
 error.message;
+
 return;
 
 }
@@ -698,51 +1000,43 @@ location.href = location.pathname;
 
 }
 
-const areaPlano = document.createElement('div');
+novaEmpresa(false);
 
-areaPlano.innerHTML = `
-<label>Plano comercial desejado</label>
+cliente.auth.onAuthStateChange((evento,sessao)=>{
 
-<select id="planoSolicitado">
-<option value="basico">
-Básico - R$ 19,90/mês
-</option>
+if(evento === 'PASSWORD_RECOVERY'){
 
-<option value="profissional">
-Profissional - R$ 39,90/mês
-</option>
+abrirRecuperacao();
 
-<option value="premium">
-Premium - R$ 69,90/mês
-</option>
-</select>
+return;
 
-<p id="infoPlano">
-A ativação do plano depende da aprovação
-do administrador.
-</p>
-`;
+}
 
-$('enviar').before(areaPlano);
+if(sessao && !modoRecuperacao &&
+(evento === 'INITIAL_SESSION' ||
+evento === 'SIGNED_IN')){
 
-const editarComPlano = editarEmpresa;
+setTimeout(()=>{
 
-editarEmpresa = function(empresa){
-editarComPlano(empresa);
+if(!modoRecuperacao){
 
-$('planoSolicitado').value =
-empresa.plano_solicitado ||
-empresa.plano ||
-'basico';
-};
+abrirPainel(sessao.user);
 
-const novaComPlano = novaEmpresa;
+}
 
-novaEmpresa = function(){
-novaComPlano();
-$('planoSolicitado').value = 'basico';
-};
+},0);
+
+}
+
+});
+
+if(modoRecuperacao){
+
+abrirRecuperacao();
+
+}
 
 </script>
+
 </body>
 </html>
