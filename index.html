@@ -14,7 +14,7 @@ margin:0;
 background:#f5f7f4;
 color:#183e2c;
 font:16px Arial,sans-serif;
-padding-bottom:85px
+padding-bottom:95px
 }
 
 header{
@@ -107,6 +107,88 @@ border-radius:10px
 display:inline-block;
 margin:8px;
 color:#174632
+}
+
+.entry h3{
+margin:12px 0
+}
+
+.entry p{
+line-height:1.5;
+overflow-wrap:anywhere
+}
+
+.profissional-card{
+border:2px solid #32764e
+}
+
+.premium-card{
+border:2px solid #e4bc36;
+box-shadow:0 4px 12px #d6b42d22
+}
+
+.selo-premium{
+display:inline-block;
+background:#f5cf52;
+color:#194c36;
+padding:7px 12px;
+border-radius:8px;
+font-size:12px;
+font-weight:bold;
+margin-bottom:10px
+}
+
+.selo-profissional{
+display:inline-block;
+background:#194c36;
+color:white;
+padding:7px 12px;
+border-radius:8px;
+font-size:12px;
+font-weight:bold;
+margin-bottom:10px
+}
+
+.publicidade{
+background:linear-gradient(135deg,#194c36,#32764e);
+color:white;
+padding:20px;
+border:3px solid #f5cf52;
+border-radius:18px;
+margin:15px 0
+}
+
+.publicidade img{
+width:100%;
+max-height:220px;
+object-fit:cover;
+border-radius:12px;
+margin-top:10px
+}
+
+.publicidade button{
+width:100%;
+margin-top:10px
+}
+
+.publicidade small{
+color:#ffe17a
+}
+
+.contatos{
+display:flex;
+flex-wrap:wrap;
+gap:8px;
+margin:12px 0
+}
+
+.contatos a{
+background:#edf4ed;
+padding:10px;
+border-radius:8px;
+text-decoration:none;
+font-size:14px;
+margin:0
 }
 
 nav{
@@ -236,32 +318,9 @@ const icons=[
 
 const empresas=[];
 
-async function carregarEmpresas(){
-
-const resposta=await fetch(
-'https://fhclimiwecgxmgigibix.supabase.co/rest/v1/empresas?select=*&aprovado=eq.true',
-{
-headers:{
-apikey:'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
-}
-}
-);
-
-if(!resposta.ok){
-throw new Error('Erro ao consultar empresas');
-}
-
-const dados=await resposta.json();
-
-empresas.splice(
-0,
-empresas.length,
-...dados
-);
-
-}
-
 const app=document.getElementById('app');
+
+let mode='home';
 
 let fav=[];
 
@@ -276,17 +335,104 @@ if(!Array.isArray(fav))fav=[];
 fav=[];
 }
 
-let mode='home';
-let category=-1;
+fav=fav.map(String);
 
 const norm=s=>String(s||'')
 .normalize('NFD')
 .replace(/[\u0300-\u036f]/g,'')
 .toLowerCase();
 
+function planoAtivo(e){
+
+const plano=norm(e.plano).trim();
+
+if(plano==='premium')return 'premium';
+
+if(plano==='profissional')return 'profissional';
+
+return 'basico';
+
+}
+
+function prioridade(e){
+
+const plano=planoAtivo(e);
+
+if(plano==='premium')return 3;
+
+if(plano==='profissional')return 2;
+
+return 1;
+
+}
+
+function ordenar(lista){
+
+return [...lista].sort((a,b)=>{
+
+const diferenca=prioridade(b)-prioridade(a);
+
+if(diferenca!==0)return diferenca;
+
+return String(a.nome||'').localeCompare(
+String(b.nome||''),
+'pt-BR'
+);
+
+});
+
+}
+
+async function carregarEmpresas(){
+
+const campos=[
+'id',
+'nome',
+'categoria',
+'descricao',
+'foto',
+'endereco',
+'horario',
+'whatsapp',
+'telefone',
+'instagram',
+'site',
+'plano',
+'aprovado',
+'destaque'
+].join(',');
+
+const resposta=await fetch(
+'https://fhclimiwecgxmgigibix.supabase.co/rest/v1/empresas?select='+campos+'&aprovado=eq.true',
+{
+cache:'no-store',
+headers:{
+apikey:'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
+}
+}
+);
+
+if(!resposta.ok){
+
+throw new Error(
+'Erro ao consultar empresas'
+);
+
+}
+
+const dados=await resposta.json();
+
+empresas.splice(
+0,
+empresas.length,
+...ordenar(dados)
+);
+
+}
+
 function el(tag,txt,parent=app){
 
-let e=document.createElement(tag);
+const e=document.createElement(tag);
 
 if(txt)e.textContent=txt;
 
@@ -298,7 +444,9 @@ return e;
 
 function btn(txt,fn,parent=app){
 
-let b=el('button',txt,parent);
+const b=el('button',txt,parent);
+
+b.type='button';
 
 b.onclick=fn;
 
@@ -316,7 +464,7 @@ window.scrollTo(0,0);
 
 function search(fn){
 
-let i=el('input');
+const i=el('input');
 
 i.type='search';
 
@@ -332,16 +480,138 @@ return i;
 function corresponde(e,q){
 
 return norm(
-e.nome+' '+
+(e.nome||'')+' '+
 (e.endereco||'')+' '+
-(cats[e.categoria]||'')
+(e.descricao||'')+' '+
+(cats[Number(e.categoria)]||'')
 ).includes(norm(q));
 
 }
 
-function cards(list,parent){
+function urlSegura(valor){
 
-if(!list.length){
+if(!valor)return '';
+
+try{
+
+let texto=String(valor).trim();
+
+if(!/^https?:\/\//i.test(texto)){
+texto='https://'+texto;
+}
+
+const url=new URL(texto);
+
+if(
+url.protocol!=='https:' &&
+url.protocol!=='http:'
+)return '';
+
+return url.href;
+
+}catch(e){
+
+return '';
+
+}
+
+}
+
+function link(txt,url,parent){
+
+if(!url)return;
+
+const a=el('a',txt,parent);
+
+a.href=url;
+
+a.target='_blank';
+
+a.rel='noopener noreferrer';
+
+}
+
+function whatsappURL(numero){
+
+let n=String(numero||'')
+.replace(/\D/g,'');
+
+if(n.length===10||n.length===11){
+n='55'+n;
+}
+
+if(n.length<10||n.length>15){
+return '';
+}
+
+return 'https://wa.me/'+n;
+
+}
+
+function instagramURL(valor){
+
+let nome=String(valor||'').trim();
+
+if(!nome)return '';
+
+if(
+nome.startsWith('https://')||
+nome.startsWith('http://')
+){
+
+try{
+
+const url=new URL(nome);
+
+if(
+url.hostname==='instagram.com'||
+url.hostname==='www.instagram.com'
+){
+
+return url.href;
+
+}
+
+}catch(e){}
+
+return '';
+
+}
+
+nome=nome.replace(
+/^(www\.)?instagram\.com\//i,
+''
+).replace(/^@/,'');
+
+if(!/^[a-zA-Z0-9._]+$/.test(nome)){
+return '';
+}
+
+return 'https://www.instagram.com/'+nome;
+
+}
+
+function adicionarFoto(e,parent){
+
+const url=urlSegura(e.foto);
+
+if(!url)return;
+
+const img=el('img','',parent);
+
+img.src=url;
+
+img.alt=e.nome||'Foto da empresa';
+
+img.loading='lazy';
+
+img.onerror=()=>img.remove();
+
+}
+
+function cards(lista,parent){
+
+if(!lista.length){
 
 el(
 'p',
@@ -353,81 +623,155 @@ return;
 
 }
 
-list.forEach(e=>{
+ordenar(lista).forEach(e=>{
 
-let c=el('article','',parent);
+const plano=planoAtivo(e);
+
+const c=el('article','',parent);
 
 c.className='entry';
 
-if(e.foto){
+if(plano==='premium'){
 
-let img=el('img','',c);
+c.classList.add('premium-card');
 
-img.src=e.foto;
+const selo=el(
+'div',
+'⭐ PREMIUM',
+c
+);
 
-img.alt=e.nome;
+selo.className='selo-premium';
 
-img.loading='lazy';
+}else if(plano==='profissional'){
+
+c.classList.add('profissional-card');
+
+const selo=el(
+'div',
+'★ EM DESTAQUE',
+c
+);
+
+selo.className='selo-profissional';
 
 }
 
+adicionarFoto(e,c);
+
 el('h3',e.nome,c);
 
-if(e.destaque){
+if(cats[Number(e.categoria)]){
 
-el('small','★ Em destaque',c);
+el(
+'small',
+cats[Number(e.categoria)],
+c
+);
+
+}
+
+if(e.descricao){
+
+el('p',e.descricao,c);
 
 }
 
 if(e.endereco){
 
-el('p',e.endereco,c);
+el('p','📍 '+e.endereco,c);
 
 }
 
 if(e.horario){
 
-el('p','Horário: '+e.horario,c);
+el('p','🕒 '+e.horario,c);
 
 }
 
+const contatos=el('div','',c);
+
+contatos.className='contatos';
+
 if(e.whatsapp){
 
-let a=el('a','WhatsApp',c);
+link(
+'💬 WhatsApp',
+whatsappURL(e.whatsapp),
+contatos
+);
 
-a.href='https://wa.me/'+
-String(e.whatsapp).replace(/\D/g,'');
+}
 
-a.target='_blank';
+if(e.telefone){
 
-a.rel='noopener noreferrer';
+const telefone=String(e.telefone)
+.replace(/[^\d+]/g,'');
+
+if(telefone){
+
+const a=el(
+'a',
+'📞 Ligar',
+contatos
+);
+
+a.href='tel:'+telefone;
+
+}
 
 }
 
 if(e.endereco){
 
-let a=el('a','Localização',c);
-
-a.href=
+link(
+'📍 Localização',
 'https://www.google.com/maps/search/?api=1&query='+
 encodeURIComponent(
 e.endereco+' Lumiar Nova Friburgo'
+),
+contatos
 );
-
-a.target='_blank';
-
-a.rel='noopener noreferrer';
 
 }
 
-let b=btn(
-fav.includes(e.id)?
+if(
+plano==='profissional'||
+plano==='premium'
+){
+
+if(e.instagram){
+
+link(
+'📸 Instagram',
+instagramURL(e.instagram),
+contatos
+);
+
+}
+
+if(e.site){
+
+link(
+'🌐 Site',
+urlSegura(e.site),
+contatos
+);
+
+}
+
+}
+
+const id=String(e.id);
+
+const b=btn(
+fav.includes(id)?
 '♥ Favorito':'♡ Favoritar',
 ()=>{
 
-fav=fav.includes(e.id)?
-fav.filter(x=>x!==e.id):
-[...fav,e.id];
+fav=fav.includes(id)?
+fav.filter(x=>x!==id):
+[...fav,id];
 
 try{
 
@@ -444,7 +788,7 @@ favorites();
 
 }else{
 
-b.textContent=fav.includes(e.id)?
+b.textContent=fav.includes(id)?
 '♥ Favorito':'♡ Favoritar';
 
 }
@@ -452,6 +796,82 @@ b.textContent=fav.includes(e.id)?
 },
 c
 );
+
+});
+
+}
+
+function bannersPremium(parent){
+
+const lista=ordenar(
+empresas.filter(
+e=>planoAtivo(e)==='premium'
+)
+);
+
+if(!lista.length)return;
+
+el(
+'h2',
+'⭐ Empresas patrocinadoras',
+parent
+);
+
+lista.forEach(e=>{
+
+const c=el('article','',parent);
+
+c.className='publicidade';
+
+el(
+'small',
+'PUBLICIDADE • PREMIUM',
+c
+);
+
+el('h2',e.nome,c);
+
+adicionarFoto(e,c);
+
+if(e.descricao){
+
+el('p',e.descricao,c);
+
+}
+
+btn(
+'Conhecer empresa',
+()=>{
+
+listing(
+e.nome,
+[e],
+'empresa'
+);
+
+},
+c
+);
+
+const url=whatsappURL(e.whatsapp);
+
+if(url){
+
+btn(
+'💬 Falar pelo WhatsApp',
+()=>{
+
+window.open(
+url,
+'_blank',
+'noopener,noreferrer'
+);
+
+},
+c
+);
+
+}
 
 });
 
@@ -467,11 +887,13 @@ search(render);
 
 el('h2','Categorias');
 
-let g=el('div');
+const g=el('div');
 
 g.className='grid';
 
-let results=el('section');
+const publicidade=el('section');
+
+const results=el('section');
 
 function render(q=''){
 
@@ -479,11 +901,17 @@ g.replaceChildren();
 
 results.replaceChildren();
 
+publicidade.replaceChildren();
+
 cats.forEach((n,k)=>{
 
 if(norm(n).includes(norm(q))){
 
-let b=btn('',()=>openCat(k),g);
+const b=btn(
+'',
+()=>openCat(k),
+g
+);
 
 b.className='cat';
 
@@ -495,19 +923,39 @@ el('div',n,b);
 
 });
 
-let list=empresas.filter(e=>
-q?corresponde(e,q):e.destaque
+if(!q.trim()){
+
+bannersPremium(publicidade);
+
+}
+
+const lista=empresas.filter(e=>
+
+q.trim()?
+corresponde(e,q):
+planoAtivo(e)==='premium'
+
 );
 
-if(list.length){
+if(lista.length){
 
 el(
 'h2',
-q?'Resultados':'Empresas em destaque',
+q.trim()?
+'Resultados da pesquisa':
+'Empresas em destaque',
 results
 );
 
-cards(list,results);
+cards(lista,results);
+
+}else if(q.trim()){
+
+el(
+'p',
+'Nenhuma empresa encontrada.',
+results
+);
 
 }
 
@@ -515,11 +963,15 @@ cards(list,results);
 
 render();
 
-let banner=el('section');
+const banner=el('section');
 
 banner.className='banner';
 
-el('h2','Anuncie sua empresa',banner);
+el(
+'h2',
+'Anuncie sua empresa',
+banner
+);
 
 el(
 'p',
@@ -536,14 +988,16 @@ banner
 btn(
 '🏪 Cadastre sua empresa',
 ()=>{
+
 window.location.href='comerciante.html';
+
 },
 banner
 );
 
 }
 
-function listing(title,list,m){
+function listing(titulo,lista,m){
 
 mode=m;
 
@@ -551,18 +1005,18 @@ reset();
 
 btn('← Voltar',home);
 
-el('h2',title);
+el('h2',titulo);
 
 search(q=>render(q));
 
-let r=el('section');
+const r=el('section');
 
 function render(q=''){
 
 r.replaceChildren();
 
 cards(
-list.filter(e=>corresponde(e,q)),
+lista.filter(e=>corresponde(e,q)),
 r
 );
 
@@ -574,11 +1028,21 @@ render();
 
 function openCat(k){
 
-category=k;
+let lista=empresas.filter(
+e=>Number(e.categoria)===k
+);
+
+if(k===7){
+
+lista=lista.filter(
+e=>planoAtivo(e)!=='basico'
+);
+
+}
 
 listing(
 icons[k]+' '+cats[k],
-empresas.filter(e=>Number(e.categoria)===k),
+lista,
 'cat'
 );
 
@@ -598,7 +1062,9 @@ function favorites(){
 
 listing(
 'Meus favoritos',
-empresas.filter(e=>fav.includes(e.id)),
+empresas.filter(
+e=>fav.includes(String(e.id))
+),
 'fav'
 );
 
@@ -619,11 +1085,15 @@ el(
 'Você está navegando como visitante. Seus favoritos ficam neste navegador.'
 );
 
-let c=el('section');
+const c=el('section');
 
 c.className='entry';
 
-el('h2','Área do comerciante',c);
+el(
+'h2',
+'Área do comerciante',
+c
+);
 
 el(
 'p',
@@ -634,7 +1104,9 @@ c
 btn(
 'Acessar minha empresa',
 ()=>{
+
 window.location.href='comerciante.html';
+
 },
 c
 );
@@ -701,7 +1173,7 @@ beneficios:[
 
 planos.forEach(p=>{
 
-let c=el('article');
+const c=el('article');
 
 c.className='plano';
 
@@ -709,7 +1181,7 @@ if(p.nome==='Premium'){
 
 c.classList.add('premium');
 
-let selo=el(
+const selo=el(
 'div',
 'MÁXIMA VISIBILIDADE',
 c
@@ -721,7 +1193,7 @@ selo.className='selo';
 
 el('h2',p.nome,c);
 
-let preco=el(
+const preco=el(
 'div',
 'R$ '+p.valor,
 c
@@ -731,7 +1203,7 @@ preco.className='preco';
 
 el('span',' /mês',preco);
 
-let lista=el('ul','',c);
+const lista=el('ul','',c);
 
 p.beneficios.forEach(item=>{
 
@@ -742,25 +1214,31 @@ el('li','✓ '+item,lista);
 btn(
 'Cadastrar empresa',
 ()=>{
+
 window.location.href='comerciante.html';
+
 },
 c
 );
 
 });
 
-let aviso=el(
+const aviso=el(
 'p',
 'Planos propostos para o lançamento comercial. Benefícios e contratação sujeitos à disponibilidade.'
 );
 
 aviso.className='aviso';
 
-let banner=el('section');
+const banner=el('section');
 
 banner.className='banner';
 
-el('h2','Acesso gratuito',banner);
+el(
+'h2',
+'Acesso gratuito',
+banner
+);
 
 el(
 'p',
@@ -768,13 +1246,23 @@ el(
 banner
 );
 
-btn('Explorar Lumiar',explore,banner);
+btn(
+'Explorar Lumiar',
+explore,
+banner
+);
 
 }
 
+el('p','Carregando Lumiar Digital...');
+
 carregarEmpresas()
 
-.then(()=>home())
+.then(()=>{
+
+home();
+
+})
 
 .catch(erro=>{
 
@@ -782,7 +1270,9 @@ console.error(erro);
 
 home();
 
-alert('Erro ao carregar empresas.');
+alert(
+'Erro ao carregar empresas. Verifique a conexão ou tente novamente.'
+);
 
 });
 
@@ -790,4 +1280,3 @@ alert('Erro ao carregar empresas.');
 
 </body>
 </html>
-
