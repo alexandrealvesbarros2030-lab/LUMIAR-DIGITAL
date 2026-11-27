@@ -167,7 +167,36 @@ Empresa em destaque
 </section>
 
 <section>
+<section>
 
+<h2>🏷️ Gerenciar promoções</h2>
+
+<div class="grid">
+
+<div>
+Total de promoções
+<div class="numero" id="totalPromocoes">0</div>
+</div>
+
+<div>
+Aguardando aprovação
+<div class="numero" id="promocoesPendentes">0</div>
+</div>
+
+</div>
+
+<select id="filtroPromocoes"
+onchange="listarPromocoes()">
+
+<option value="todas">Todas as promoções</option>
+<option value="pendentes">Pendentes</option>
+<option value="aprovadas">Aprovadas</option>
+
+</select>
+
+<div id="listaPromocoes"></div>
+
+</section>
 <h2>Empresas cadastradas</h2>
 
 <input id="busca" placeholder="Buscar empresa..." oninput="listar()">
@@ -714,7 +743,194 @@ return;
 await carregar();
 
 }
+let promocoes = [];
 
+async function carregarPromocoes(){
+
+const {data,error} = await cliente
+.from('promocoes')
+.select('*')
+.order('criado_em',{ascending:false});
+
+if(error){
+
+$('listaPromocoes').textContent =
+'Erro: '+error.message;
+
+return;
+
+}
+
+promocoes = data || [];
+
+$('totalPromocoes').textContent =
+promocoes.length;
+
+$('promocoesPendentes').textContent =
+promocoes.filter(p=>!p.aprovado).length;
+
+listarPromocoes();
+
+}
+
+function listarPromocoes(){
+
+const lista = $('listaPromocoes');
+
+lista.replaceChildren();
+
+const filtro = $('filtroPromocoes').value;
+
+const resultado = promocoes.filter(p=>{
+
+if(filtro==='pendentes')return !p.aprovado;
+
+if(filtro==='aprovadas')return p.aprovado;
+
+return true;
+
+});
+
+if(!resultado.length){
+
+texto('p','Nenhuma promoção encontrada.',lista);
+
+return;
+
+}
+
+resultado.forEach(p=>{
+
+const card = document.createElement('article');
+
+card.style.background = '#f3f6f2';
+
+texto('h3',p.titulo,card);
+
+const empresa = empresas.find(
+e=>e.id===p.empresa_id
+);
+
+texto('p',
+'Empresa: '+(empresa?.nome || 'Não identificada'),
+card);
+
+if(p.foto){
+
+const img = document.createElement('img');
+
+img.src = p.foto;
+img.alt = p.titulo;
+
+img.style.cssText =
+'width:100%;max-height:220px;object-fit:cover';
+
+card.append(img);
+
+}
+
+texto('p',p.descricao || '',card);
+
+texto('p',
+'De: '+moeda(p.preco_original),card);
+
+texto('h3',
+'Por: '+moeda(p.preco_promocional),card);
+
+texto('p',
+'Início: '+p.data_inicio,card);
+
+texto('p',
+'Término: '+p.data_fim,card);
+
+texto('p',
+p.aprovado
+?'🟢 Aprovada'
+:'🟡 Aguardando aprovação',
+card);
+
+if(p.destaque){
+
+texto('p','⭐ Promoção em destaque',card);
+
+}
+
+botao(card,
+p.aprovado?'Desaprovar':'Aprovar',
+()=>atualizarPromocao(p.id,{
+aprovado:!p.aprovado
+}),
+'verde');
+
+botao(card,
+p.destaque?'Retirar destaque':'Destacar',
+()=>atualizarPromocao(p.id,{
+destaque:!p.destaque
+}));
+
+botao(card,'Excluir',
+()=>excluirPromocao(p.id),
+'vermelho');
+
+lista.append(card);
+
+});
+
+}
+
+async function atualizarPromocao(id,dados){
+
+const {error} = await cliente
+.from('promocoes')
+.update(dados)
+.eq('id',id)
+.select('id')
+.single();
+
+if(error){
+
+alert('Erro: '+error.message);
+
+return;
+
+}
+
+await carregarPromocoes();
+
+}
+
+async function excluirPromocao(id){
+
+if(!confirm('Deseja excluir esta promoção?'))return;
+
+const {error} = await cliente
+.from('promocoes')
+.delete()
+.eq('id',id)
+.select('id')
+.single();
+
+if(error){
+
+alert('Erro: '+error.message);
+
+return;
+
+}
+
+await carregarPromocoes();
+
+}
+
+const carregarOriginal = carregar;
+
+carregar = async function(){
+
+await carregarOriginal();
+
+await carregarPromocoes();
+
+};
 </script>
 </body>
 </html>
