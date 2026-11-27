@@ -1468,22 +1468,63 @@ el(
 card
 );
 
+
 const url = whatsappURL(empresa.whatsapp);
+
+const valorOferta = p.preco_promocional != null
+? moedaPromocao(p.preco_promocional)
+: 'Consulte o valor';
+
+const mensagem =
+'Olá! Vi esta oferta no Lumiar Digital:\n\n'+
+p.titulo+'\n'+
+'Valor: '+valorOferta+'\n\n'+
+'Gostaria de mais informações.';
 
 if(url){
 
 const b = btn(
-'💬 Aproveitar oferta',
+'💬 Comprar pelo WhatsApp',
 ()=>window.open(
-url,'_blank','noopener,noreferrer'
+url+'?text='+encodeURIComponent(mensagem),
+'_blank',
+'noopener,noreferrer'
 ),
 card
 );
 
 b.style.cssText =
-'width:100%;background:#194c36;color:white';
+'width:100%;background:#168a49;color:white;margin-top:10px';
 
 }
+
+const compartilhar = btn(
+'📲 Compartilhar oferta',
+()=>{
+
+const texto =
+'🏷️ OFERTA LUMIAR DIGITAL\n\n'+
+p.titulo+'\n'+
+empresa.nome+'\n\n'+
+'Por: '+valorOferta+'\n'+
+'Válida até: '+dataPromocao(p.data_fim)+'\n\n'+
+'Confira no Lumiar Digital:\n'+
+window.location.href.split('#')[0];
+
+window.open(
+'https://wa.me/?text='+encodeURIComponent(texto),
+'_blank',
+'noopener,noreferrer'
+);
+
+},
+card
+);
+
+compartilhar.style.cssText =
+'width:100%;background:#f5cf52;color:#194c36;margin-top:10px';
+
+
 
 });
 
