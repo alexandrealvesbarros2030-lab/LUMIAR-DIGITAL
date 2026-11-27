@@ -1037,6 +1037,294 @@ abrirRecuperacao();
 }
 
 </script>
+<script>
 
+const secaoPromocoes = document.createElement('section');
+
+secaoPromocoes.innerHTML = `
+<h2>🏷️ Minhas promoções</h2>
+
+<form id="formPromocao">
+
+<label>Selecione sua empresa</label>
+<select id="promoEmpresa" required></select>
+
+<label>Título da promoção</label>
+<input id="promoTitulo" required>
+
+<label>Descrição</label>
+<textarea id="promoDescricao" rows="4"></textarea>
+
+<label>Preço original (R$)</label>
+<input id="promoOriginal" type="number"
+min="0.01" step="0.01" required>
+
+<label>Preço promocional (R$)</label>
+<input id="promoPreco" type="number"
+min="0.01" step="0.01" required>
+
+<label>Data de início</label>
+<input id="promoInicio" type="date" required>
+
+<label>Data de término</label>
+<input id="promoFim" type="date" required>
+
+<label>Foto da promoção</label>
+<input id="promoFoto" type="file"
+accept="image/jpeg,image/png,image/webp">
+
+<button id="btnPromocao" type="submit">
+Enviar promoção para aprovação
+</button>
+
+</form>
+
+<p id="statusPromocao"></p>
+
+<h3>Promoções cadastradas</h3>
+
+<div id="listaPromocoes"></div>
+`;
+
+$('painel').appendChild(secaoPromocoes);
+
+async function carregarPromocoes(){
+
+const {data:{user}} =
+await cliente.auth.getUser();
+
+if(!user)return;
+
+const {data:empresas,error} = await cliente
+.from('empresas')
+.select('id,nome')
+.eq('user_id',user.id);
+
+if(error){
+$('statusPromocao').textContent = error.message;
+return;
+}
+
+$('promoEmpresa').replaceChildren();
+
+empresas.forEach(empresa=>{
+
+const opcao = document.createElement('option');
+
+opcao.value = empresa.id;
+opcao.textContent = empresa.nome;
+
+$('promoEmpresa').appendChild(opcao);
+
+});
+
+const lista = $('listaPromocoes');
+
+lista.replaceChildren();
+
+$('btnPromocao').disabled = !empresas.length;
+
+if(!empresas.length){
+
+lista.textContent =
+'Cadastre uma empresa primeiro.';
+
+return;
+
+}
+
+const {data,error:erro} = await cliente
+.from('promocoes')
+.select('*')
+.in('empresa_id',empresas.map(e=>e.id))
+.order('criado_em',{ascending:false});
+
+if(erro){
+
+lista.textContent = erro.message;
+return;
+
+}
+
+if(!data.length){
+
+lista.textContent =
+'Nenhuma promoção cadastrada.';
+
+return;
+
+}
+
+data.forEach(p=>{
+
+const card = document.createElement('div');
+
+card.className = 'empresa';
+
+if(p.foto){
+
+const img = document.createElement('img');
+
+img.src = p.foto;
+img.alt = p.titulo;
+
+card.appendChild(img);
+
+}
+
+const titulo = document.createElement('h3');
+
+titulo.textContent = p.titulo;
+
+const preco = document.createElement('p');
+
+preco.textContent =
+'De R$ '+Number(p.preco_original).toFixed(2)+
+' por R$ '+Number(p.preco_promocional).toFixed(2);
+
+const status = document.createElement('p');
+
+status.textContent = p.aprovado
+?'🟢 Aprovada'
+:'🟡 Aguardando aprovação';
+
+card.append(titulo,preco,status);
+
+lista.appendChild(card);
+
+});
+
+}
+
+$('formPromocao').onsubmit = async e=>{
+
+e.preventDefault();
+
+$('btnPromocao').disabled = true;
+
+try{
+
+const {data:{user}} =
+await cliente.auth.getUser();
+
+if(!user){
+
+throw new Error('Faça login novamente.');
+
+}
+
+const original = Number($('promoOriginal').value);
+
+const promocional = Number($('promoPreco').value);
+
+if(promocional <= 0 || promocional >= original){
+
+throw new Error(
+'O preço promocional deve ser positivo e menor que o original.'
+);
+
+}
+
+if($('promoFim').value < $('promoInicio').value){
+
+throw new Error('Verifique as datas da promoção.');
+
+}
+
+let foto = '';
+
+const arquivo = $('promoFoto').files[0];
+
+if(arquivo){
+
+const tipos = {
+'image/jpeg':'jpg',
+'image/png':'png',
+'image/webp':'webp'
+};
+
+const ext = tipos[arquivo.type];
+
+if(!ext || arquivo.size > 5*1024*1024){
+
+throw new Error('Imagem inválida ou maior que 5 MB.');
+
+}
+
+const caminho =
+user.id+'/'+crypto.randomUUID()+'.'+ext;
+
+const {error} = await cliente.storage
+.from('Fotos empresas')
+.upload(caminho,arquivo);
+
+if(error)throw error;
+
+foto = cliente.storage
+.from('Fotos empresas')
+.getPublicUrl(caminho).data.publicUrl;
+
+}
+
+const {error} = await cliente
+.from('promocoes')
+.insert({
+
+empresa_id:$('promoEmpresa').value,
+
+titulo:$('promoTitulo').value.trim(),
+
+descricao:$('promoDescricao').value.trim(),
+
+foto:foto,
+
+preco_original:original,
+
+preco_promocional:promocional,
+
+data_inicio:$('promoInicio').value,
+
+data_fim:$('promoFim').value,
+
+aprovado:false,
+
+destaque:false
+
+});
+
+if(error)throw error;
+
+$('formPromocao').reset();
+
+$('statusPromocao').textContent =
+'Promoção enviada para aprovação!';
+
+await carregarPromocoes();
+
+}catch(error){
+
+$('statusPromocao').textContent =
+'Erro: '+error.message;
+
+}finally{
+
+$('btnPromocao').disabled = false;
+
+}
+
+};
+
+const carregarEmpresasOriginal =
+carregarMinhasEmpresas;
+
+carregarMinhasEmpresas = async function(){
+
+await carregarEmpresasOriginal();
+
+await carregarPromocoes();
+
+};
+
+  </script>
 </body>
 </html>
