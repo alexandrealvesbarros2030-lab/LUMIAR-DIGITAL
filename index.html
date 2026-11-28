@@ -1649,6 +1649,259 @@ paginaPromocoes();
 });
 
 // FIM DO SISTEMA DE PROMOCOES
+// INICIO DO SISTEMA DE EVENTOS
+
+let eventosLumiar = [];
+let erroEventos = false;
+
+async function carregarEventos(){
+
+try{
+
+const resposta = await fetch(
+'https://fhclimiwecgxmgigibix.supabase.co/rest/v1/eventos?select=*&aprovado=eq.true&order=destaque.desc,data_inicio.asc',
+{
+cache:'no-store',
+headers:{
+apikey:'sb_publishable_8aRbVy84r3kuuPQh_Owz5w_lHu6v_oQ'
+}
+}
+);
+
+if(!resposta.ok){
+throw new Error('Erro ao carregar eventos');
+}
+
+eventosLumiar = await resposta.json();
+erroEventos = false;
+
+}catch(erro){
+
+console.error(erro);
+erroEventos = true;
+eventosLumiar = [];
+
+}
+
+}
+
+function eventosValidos(){
+
+return eventosLumiar.filter(e=>
+e.aprovado === true &&
+(e.data_fim || e.data_inicio) >= hojeLumiar()
+);
+
+}
+
+function mostrarEventos(lista,parent){
+
+if(!lista.length){
+
+el('p',
+erroEventos ?
+'Não foi possível carregar os eventos.' :
+'Nenhum evento disponível no momento.',
+parent);
+
+return;
+
+}
+
+lista.forEach(e=>{
+
+const card = el('article','',parent);
+
+card.className = 'entry';
+
+if(e.destaque){
+
+card.classList.add('premium-card');
+
+const selo = el(
+'div',
+'⭐ EVENTO EM DESTAQUE',
+card
+);
+
+selo.className = 'selo-premium';
+
+}
+
+adicionarFoto({
+foto:e.foto,
+nome:e.titulo
+},card);
+
+el('h2',e.titulo,card);
+
+if(e.categoria){
+el('small',e.categoria,card);
+}
+
+if(e.descricao){
+el('p',e.descricao,card);
+}
+
+el(
+'p',
+'📅 Data: '+dataPromocao(e.data_inicio),
+card
+);
+
+if(e.data_fim && e.data_fim!==e.data_inicio){
+
+el(
+'p',
+'📅 Até: '+dataPromocao(e.data_fim),
+card
+);
+
+}
+
+if(e.horario){
+
+el('p','🕒 '+e.horario,card);
+
+}
+
+if(e.local){
+
+el('p','📍 '+e.local,card);
+
+}
+
+if(e.endereco){
+
+el('p',e.endereco,card);
+
+}
+
+if(e.valor!=null){
+
+el(
+'h2',
+Number(e.valor)===0 ?
+'Entrada gratuita' :
+moedaPromocao(e.valor),
+card
+);
+
+}
+
+if(e.endereco){
+
+const mapa = btn(
+'📍 Ver localização',
+()=>window.open(
+'https://www.google.com/maps/search/?api=1&query='+
+encodeURIComponent(e.endereco+' Lumiar Nova Friburgo'),
+'_blank',
+'noopener,noreferrer'
+),
+card
+);
+
+mapa.style.cssText =
+'width:100%;margin-top:10px';
+
+}
+
+const compartilhar = btn(
+'📲 Compartilhar evento',
+()=>{
+
+const texto =
+'📅 EVENTO LUMIAR DIGITAL\n\n'+
+e.titulo+'\n'+
+'Data: '+dataPromocao(e.data_inicio)+'\n'+
+'Local: '+(e.local||'A confirmar')+'\n\n'+
+'Confira no Lumiar Digital:\n'+
+window.location.origin+
+window.location.pathname;
+
+window.open(
+'https://wa.me/?text='+encodeURIComponent(texto),
+'_blank',
+'noopener,noreferrer'
+);
+
+},
+card
+);
+
+compartilhar.style.cssText =
+'width:100%;margin-top:10px;background:#194c36;color:white';
+
+});
+
+}
+
+function paginaEventos(){
+
+mode='eventos';
+
+reset();
+
+btn('← Voltar',home);
+
+el('h2','📅 Eventos em Lumiar');
+
+const busca = search(render);
+
+busca.placeholder='Buscar eventos...';
+
+const lista = el('section');
+
+function render(q=''){
+
+lista.replaceChildren();
+
+mostrarEventos(
+eventosValidos().filter(e=>
+norm(
+(e.titulo||'')+' '+
+(e.descricao||'')+' '+
+(e.categoria||'')+' '+
+(e.local||'')
+).includes(norm(q))
+),
+lista
+);
+
+}
+
+render();
+
+}
+
+const openCatEventos = openCat;
+
+openCat = function(k){
+
+if(k===6){
+
+paginaEventos();
+
+return;
+
+}
+
+openCatEventos(k);
+
+};
+
+carregarEventos().then(()=>{
+
+if(mode==='eventos'){
+
+paginaEventos();
+
+}
+
+});
+
+// FIM DO SISTEMA DE EVENTOS
 </script>
 
 </body>
