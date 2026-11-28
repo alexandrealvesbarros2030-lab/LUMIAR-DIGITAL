@@ -931,6 +931,525 @@ await carregarOriginal();
 await carregarPromocoes();
 
 };
+// INICIO DO SISTEMA ADMINISTRATIVO DE EVENTOS
+
+let eventosAdmin = [];
+
+const secaoEventos = document.createElement('section');
+
+secaoEventos.innerHTML = `
+<h2>📅 Gerenciar eventos</h2>
+
+<div class="grid">
+
+<div>
+Total de eventos
+<div class="numero" id="totalEventos">0</div>
+</div>
+
+<div>
+Pendentes
+<div class="numero" id="eventosPendentes">0</div>
+</div>
+
+</div>
+
+<button class="verde" onclick="novoEvento()">
++ Cadastrar evento
+</button>
+
+<div id="cadastroEvento" hidden>
+
+<h2 id="tituloFormEvento">Cadastrar evento</h2>
+
+<form id="formEvento">
+
+<input type="hidden" id="eventoId">
+
+<label>Título do evento</label>
+<input id="evTitulo" required>
+
+<label>Categoria</label>
+<input id="evCategoria" list="categoriasEventos" required>
+
+<datalist id="categoriasEventos">
+<option value="Festival">
+<option value="Show">
+<option value="Gastronomia">
+<option value="Cultural">
+<option value="Religioso">
+<option value="Esportivo">
+<option value="Feira">
+<option value="Outros">
+</datalist>
+
+<label>Empresa responsável</label>
+<select id="evEmpresa"></select>
+
+<label>Descrição</label>
+<textarea id="evDescricao"></textarea>
+
+<label>Link da foto</label>
+<input id="evFoto" type="url">
+
+<label>Local do evento</label>
+<input id="evLocal">
+
+<label>Endereço</label>
+<input id="evEndereco">
+
+<label>Data de início</label>
+<input id="evInicio" type="date" required>
+
+<label>Data de término</label>
+<input id="evFim" type="date">
+
+<label>Horário</label>
+<input id="evHorario" type="time">
+
+<label>Valor da entrada (0 = gratuito)</label>
+<input id="evValor" type="number"
+min="0" step="0.01" value="0" required>
+
+<label>WhatsApp</label>
+<input id="evWhatsapp" type="tel">
+
+<label>Link de divulgação</label>
+<input id="evLink" type="url">
+
+<p>
+<label>
+<input type="checkbox" id="evAprovado">
+Evento aprovado
+</label>
+</p>
+
+<p>
+<label>
+<input type="checkbox" id="evDestaque">
+Evento em destaque
+</label>
+</p>
+
+<button class="verde" id="salvarEvento">
+Salvar evento
+</button>
+
+<button type="button" onclick="fecharEvento()">
+Cancelar
+</button>
+
+</form>
+
+</div>
+
+<input id="buscaEventos"
+placeholder="Buscar evento..."
+oninput="listarEventosAdmin()">
+
+<select id="filtroEventos"
+onchange="listarEventosAdmin()">
+
+<option value="todos">Todos os eventos</option>
+<option value="pendentes">Pendentes</option>
+<option value="aprovados">Aprovados</option>
+<option value="destaques">Destaques</option>
+
+</select>
+
+<div id="listaEventosAdmin"></div>
+`;
+
+$('painel').append(secaoEventos);
+
+async function carregarEventosAdmin(){
+
+const {data,error}=await cliente
+.from('eventos')
+.select('*')
+.order('data_inicio',{ascending:true});
+
+if(error){
+
+$('listaEventosAdmin').textContent=
+'Erro: '+error.message;
+
+return;
+
+}
+
+eventosAdmin=data||[];
+
+$('totalEventos').textContent=
+eventosAdmin.length;
+
+$('eventosPendentes').textContent=
+eventosAdmin.filter(e=>!e.aprovado).length;
+
+listarEventosAdmin();
+
+}
+
+function dataEvento(data){
+
+if(!data)return 'Não informada';
+
+return data.split('-').reverse().join('/');
+
+}
+
+function listarEventosAdmin(){
+
+const lista=$('listaEventosAdmin');
+
+lista.replaceChildren();
+
+const busca=$('buscaEventos').value.toLowerCase();
+
+const filtro=$('filtroEventos').value;
+
+const resultado=eventosAdmin.filter(e=>{
+
+const conteudo=[
+e.titulo,e.categoria,e.local
+].join(' ').toLowerCase();
+
+if(!conteudo.includes(busca))return false;
+
+if(filtro==='pendentes')return !e.aprovado;
+
+if(filtro==='aprovados')return e.aprovado;
+
+if(filtro==='destaques')return e.destaque;
+
+return true;
+
+});
+
+if(!resultado.length){
+
+texto('p','Nenhum evento encontrado.',lista);
+
+return;
+
+}
+
+resultado.forEach(e=>{
+
+const card=document.createElement('article');
+
+card.style.background='#f3f6f2';
+
+if(e.destaque){
+
+card.style.border='2px solid #e4c451';
+
+texto('p','⭐ Evento em destaque',card);
+
+}
+
+texto('h2',e.titulo,card);
+
+if(e.foto){
+
+const img=document.createElement('img');
+
+img.src=e.foto;
+
+img.alt=e.titulo;
+
+img.style.cssText=
+'width:100%;max-height:220px;object-fit:cover';
+
+card.append(img);
+
+}
+
+texto('p',e.categoria||'',card);
+
+texto('p',e.descricao||'',card);
+
+texto('p','📅 '+dataEvento(e.data_inicio),card);
+
+if(e.data_fim){
+
+texto('p','Até: '+dataEvento(e.data_fim),card);
+
+}
+
+texto('p','🕒 '+(e.horario||''),card);
+
+texto('p','📍 '+(e.local||''),card);
+
+texto('h3',
+Number(e.valor)>0
+?moeda(e.valor)
+:'Entrada gratuita',card);
+
+texto('p',
+e.aprovado
+?'🟢 Aprovado'
+:'🟡 Pendente',card);
+
+botao(card,'Editar',()=>editarEvento(e));
+
+botao(card,
+e.aprovado?'Desaprovar':'Aprovar',
+()=>atualizarEvento(e.id,{
+aprovado:!e.aprovado
+}),'verde');
+
+botao(card,
+e.destaque?'Retirar destaque':'Destacar',
+()=>atualizarEvento(e.id,{
+destaque:!e.destaque
+}));
+
+botao(card,'Excluir',
+()=>excluirEvento(e.id),'vermelho');
+
+lista.append(card);
+
+});
+
+}
+
+function novoEvento(){
+
+$('formEvento').reset();
+
+$('eventoId').value='';
+
+$('tituloFormEvento').textContent=
+'Cadastrar evento';
+
+const seletor=$('evEmpresa');
+
+seletor.replaceChildren();
+
+const opcao=document.createElement('option');
+
+opcao.value='';
+
+opcao.textContent='Sem empresa vinculada';
+
+seletor.append(opcao);
+
+empresas.forEach(e=>{
+
+const op=document.createElement('option');
+
+op.value=e.id;
+
+op.textContent=e.nome;
+
+seletor.append(op);
+
+});
+
+$('cadastroEvento').hidden=false;
+
+$('cadastroEvento').scrollIntoView();
+
+}
+
+function fecharEvento(){
+
+$('cadastroEvento').hidden=true;
+
+}
+
+function editarEvento(e){
+
+novoEvento();
+
+$('tituloFormEvento').textContent=
+'Editar evento';
+
+$('eventoId').value=e.id;
+
+$('evTitulo').value=e.titulo||'';
+
+$('evCategoria').value=e.categoria||'';
+
+$('evEmpresa').value=e.empresa_id||'';
+
+$('evDescricao').value=e.descricao||'';
+
+$('evFoto').value=e.foto||'';
+
+$('evLocal').value=e.local||'';
+
+$('evEndereco').value=e.endereco||'';
+
+$('evInicio').value=e.data_inicio||'';
+
+$('evFim').value=e.data_fim||'';
+
+$('evHorario').value=(e.horario||'').slice(0,5);
+
+$('evValor').value=e.valor??0;
+
+$('evWhatsapp').value=e.whatsapp||'';
+
+$('evLink').value=e.link||'';
+
+$('evAprovado').checked=!!e.aprovado;
+
+$('evDestaque').checked=!!e.destaque;
+
+}
+
+$('formEvento').onsubmit=async ev=>{
+
+ev.preventDefault();
+
+$('salvarEvento').disabled=true;
+
+try{
+
+const dados={
+
+titulo:$('evTitulo').value.trim(),
+
+categoria:$('evCategoria').value.trim(),
+
+empresa_id:$('evEmpresa').value||null,
+
+descricao:$('evDescricao').value.trim(),
+
+foto:$('evFoto').value.trim(),
+
+local:$('evLocal').value.trim(),
+
+endereco:$('evEndereco').value.trim(),
+
+data_inicio:$('evInicio').value,
+
+data_fim:$('evFim').value||null,
+
+horario:$('evHorario').value,
+
+valor:Number($('evValor').value),
+
+whatsapp:$('evWhatsapp').value.trim(),
+
+link:$('evLink').value.trim(),
+
+aprovado:$('evAprovado').checked,
+
+destaque:$('evDestaque').checked
+
+};
+
+if(dados.data_fim &&
+dados.data_fim<dados.data_inicio){
+
+throw new Error(
+'A data final não pode ser anterior à inicial.'
+);
+
+}
+
+const id=$('eventoId').value;
+
+let consulta;
+
+if(id){
+
+consulta=cliente
+.from('eventos')
+.update(dados)
+.eq('id',id);
+
+}else{
+
+consulta=cliente
+.from('eventos')
+.insert(dados);
+
+}
+
+const {error}=await consulta
+.select('id')
+.single();
+
+if(error)throw error;
+
+alert('Evento salvo com sucesso!');
+
+fecharEvento();
+
+await carregarEventosAdmin();
+
+}catch(error){
+
+alert('Erro ao salvar: '+error.message);
+
+}finally{
+
+$('salvarEvento').disabled=false;
+
+}
+
+};
+
+async function atualizarEvento(id,dados){
+
+const {error}=await cliente
+.from('eventos')
+.update(dados)
+.eq('id',id)
+.select('id')
+.single();
+
+if(error){
+
+alert('Erro: '+error.message);
+
+return;
+
+}
+
+await carregarEventosAdmin();
+
+}
+
+async function excluirEvento(id){
+
+if(!confirm('Deseja realmente excluir este evento?'))
+return;
+
+const {error}=await cliente
+.from('eventos')
+.delete()
+.eq('id',id)
+.select('id')
+.single();
+
+if(error){
+
+alert('Erro: '+error.message);
+
+return;
+
+}
+
+await carregarEventosAdmin();
+
+}
+
+const carregarComPromocoes=carregar;
+
+carregar=async function(){
+
+await carregarComPromocoes();
+
+await carregarEventosAdmin();
+
+};
+
+// FIM DO SISTEMA ADMINISTRATIVO DE EVENTOS  
 </script>
 </body>
 </html>
